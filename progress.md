@@ -12,8 +12,8 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Added `.gitignore` so local Playwright screenshots and macOS metadata are not accidentally published.
 - Added `.github/workflows/pages.yml` for GitHub Actions based Pages deployment.
 - Updated README deployment instructions to use GitHub Actions as the Pages source.
+- Created public GitHub repository `mammgerL/car-crash-simulator`, pushed `main`, enabled Pages with `build_type=workflow`, and verified a successful manual GitHub Actions deployment.
 
 ## TODO
 
-- Create the public GitHub repository with `gh`, push `main`, enable Pages from Actions, and verify the deployment URL.
 - Optional next improvements: mobile touch controls, more arenas, persistent best score.
