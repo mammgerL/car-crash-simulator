@@ -13,7 +13,12 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Added `.github/workflows/pages.yml` for GitHub Actions based Pages deployment.
 - Updated README deployment instructions to use GitHub Actions as the Pages source.
 - Created public GitHub repository `mammgerL/car-crash-simulator`, pushed `main`, enabled Pages with `build_type=workflow`, and verified a successful manual GitHub Actions deployment.
+- Started 3D upgrade request: replaced the 2D canvas game with a Three.js module, added a real 3D arena, third-person/cockpit camera switching, collision damage marks, windshield cracks, and 3D obstacle meshes.
+- Updated controls/docs for `C`/`V` view switching and noted the Three.js CDN dependency.
+- Initial 3D validation passed for chase/cockpit views, but mobile showed old 16:9 letterboxing; changed the stage to full-viewport rendering and made Three.js resize to the displayed canvas size.
+- Re-validated after the full-viewport change: chase view, cockpit view, WebGL canvas pixels, collision damage, windshield cracks, desktop screenshot, and mobile screenshot all passed with no console/page errors.
 
 ## TODO
 
+- Deploy the 3D update through GitHub Actions and verify Pages.
 - Optional next improvements: mobile touch controls, more arenas, persistent best score.

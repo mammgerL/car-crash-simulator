@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="一个可部署到 GitHub Pages 的 2D 撞车模拟器网页游戏。"
+      content="一个可部署到 GitHub Pages 的 3D 撞车模拟器网页游戏。"
     />
     <title>撞车模拟器</title>
     <link rel="stylesheet" href="style.css" />
@@ -25,6 +25,7 @@
             <div class="controls">
               <span>WASD / 方向键驾驶</span>
               <span>空格刹车</span>
+              <span>C 切换视角</span>
               <span>P 暂停</span>
               <span>F 全屏</span>
             </div>
@@ -43,6 +44,13 @@
       </section>
     </main>
 
-    <script src="game.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.164.1/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="game.js"></script>
   </body>
 </html>
