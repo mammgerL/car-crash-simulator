@@ -24,8 +24,10 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Researched free model options: CC0/Public Domain is safest for public GitHub Pages; CC-BY can work if attribution is added. Good candidates include explicit CC0 Sketchfab models, Pixabay GLB models, and CC0 game asset libraries such as Quaternius/Kenney-style packs.
 - Imported external vehicle GLB files from Kenney Car Kit 3.1 (`sedan-sports`, `suv`, `truck`, `police`) into `assets/models/kenney-car-kit/`. License is CC0; copied `License.txt`. Added `GLTFLoader` and uses the external model as the visible shell with procedural damage parts as fallback/detachable wreckage.
 - Fixed Kenney GLB texture loading by copying `Textures/colormap.png`. Validated all four external GLB vehicles in Playwright: model loaded marker matched the selected vehicle, no request failures, no console errors, nonblank WebGL screenshots.
+- Added tablet/touch controls: on-screen steering pad, gas, brake, view, pause, and restart controls. Touch input feeds the same driving logic as keyboard input.
+- Validated tablet controls on an iPad Pro landscape profile: controls were visible, gas moved the vehicle, view switched to cockpit, pause entered paused mode, restart reset score/damage, and there were no console/page errors.
 
 ## TODO
 
-- Deploy external GLB vehicle update through GitHub Actions and verify Pages.
+- Deploy tablet controls through GitHub Actions and verify Pages.
 - Optional next improvements: higher-detail licensed GLB models, mobile touch controls, more arenas, persistent best score.

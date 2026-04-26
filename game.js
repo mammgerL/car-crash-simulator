@@ -20,6 +20,11 @@ const WORLD = {
 const keys = new Set();
 const tmp = new THREE.Vector3();
 const gltfLoader = new GLTFLoader();
+const touchControls = {
+  steer: 0,
+  throttle: 0,
+  brake: false,
+};
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
 const rand = (min, max) => min + Math.random() * (max - min);
@@ -737,9 +742,13 @@ function controlPlayer(dt) {
   const p = state.player;
   const vehicle = currentVehicle();
   const throttle =
-    (isDown("arrowup", "w") ? 1 : 0) - (isDown("arrowdown", "s") ? 0.58 : 0);
-  const steer = (isDown("arrowright", "d") ? 1 : 0) - (isDown("arrowleft", "a") ? 1 : 0);
-  const brake = isDown(" ", "space", "spacebar");
+    Math.max(isDown("arrowup", "w") ? 1 : 0, touchControls.throttle) -
+    (isDown("arrowdown", "s") ? 0.58 : 0);
+  const steer =
+    (isDown("arrowright", "d") ? 1 : 0) -
+    (isDown("arrowleft", "a") ? 1 : 0) +
+    touchControls.steer;
+  const brake = isDown(" ", "space", "spacebar") || touchControls.brake;
 
   const acceleration = throttle * (brake ? vehicle.acceleration * 0.58 : vehicle.acceleration);
   p.speed += acceleration * dt;
@@ -747,7 +756,7 @@ function controlPlayer(dt) {
   p.speed = clamp(p.speed, -vehicle.reverseSpeed, vehicle.maxSpeed);
 
   const steeringGrip = clamp(Math.abs(p.speed) / 12, 0.18, 1);
-  p.angle += steer * steeringGrip * dt * vehicle.handling * (p.speed >= 0 ? 1 : -1);
+  p.angle += clamp(steer, -1, 1) * steeringGrip * dt * vehicle.handling * (p.speed >= 0 ? 1 : -1);
 
   p.vx = Math.cos(p.angle) * p.speed;
   p.vz = Math.sin(p.angle) * p.speed;
@@ -1199,10 +1208,91 @@ function createHud() {
   return hud;
 }
 
+function createTouchControls() {
+  const controls = document.createElement("div");
+  controls.id = "touch-controls";
+  controls.className = "touch-controls hidden";
+  controls.innerHTML = `
+    <div class="touch-steer" data-touch-pad>
+      <div class="touch-knob" data-touch-knob></div>
+    </div>
+    <div class="touch-actions">
+      <button class="touch-mini" type="button" data-action="view">视角</button>
+      <button class="touch-mini" type="button" data-action="pause">暂停</button>
+      <button class="touch-mini" type="button" data-action="restart">重开</button>
+    </div>
+    <div class="touch-pedals">
+      <button class="touch-pedal brake" type="button" data-pedal="brake">刹车</button>
+      <button class="touch-pedal gas" type="button" data-pedal="gas">油门</button>
+    </div>
+  `;
+  canvas.parentElement.appendChild(controls);
+
+  const pad = controls.querySelector("[data-touch-pad]");
+  const knob = controls.querySelector("[data-touch-knob]");
+  let activeSteerPointer = null;
+
+  function updateSteer(event) {
+    const rect = pad.getBoundingClientRect();
+    const center = rect.left + rect.width / 2;
+    const dx = clamp(event.clientX - center, -rect.width * 0.42, rect.width * 0.42);
+    touchControls.steer = clamp(dx / (rect.width * 0.42), -1, 1);
+    knob.style.transform = `translate(${touchControls.steer * 38}px, -50%)`;
+  }
+
+  pad.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    activeSteerPointer = event.pointerId;
+    pad.setPointerCapture(event.pointerId);
+    updateSteer(event);
+  });
+  pad.addEventListener("pointermove", (event) => {
+    if (event.pointerId === activeSteerPointer) updateSteer(event);
+  });
+  function releaseSteer(event) {
+    if (event.pointerId !== activeSteerPointer) return;
+    activeSteerPointer = null;
+    touchControls.steer = 0;
+    knob.style.transform = "translate(0, -50%)";
+  }
+  pad.addEventListener("pointerup", releaseSteer);
+  pad.addEventListener("pointercancel", releaseSteer);
+
+  controls.querySelectorAll("[data-pedal]").forEach((button) => {
+    const isGas = button.dataset.pedal === "gas";
+    const setActive = (active) => {
+      if (isGas) touchControls.throttle = active ? 1 : 0;
+      else touchControls.brake = active;
+      button.classList.toggle("active", active);
+    };
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      button.setPointerCapture(event.pointerId);
+      setActive(true);
+    });
+    button.addEventListener("pointerup", () => setActive(false));
+    button.addEventListener("pointercancel", () => setActive(false));
+    button.addEventListener("lostpointercapture", () => setActive(false));
+  });
+
+  controls.querySelector('[data-action="view"]').addEventListener("click", toggleView);
+  controls.querySelector('[data-action="pause"]').addEventListener("click", togglePause);
+  controls.querySelector('[data-action="restart"]').addEventListener("click", resetGame);
+  return controls;
+}
+
+function updateTouchControlsVisibility() {
+  const controls = document.getElementById("touch-controls") || createTouchControls();
+  const visible = state.mode === "playing" || state.mode === "paused";
+  controls.classList.toggle("hidden", !visible);
+  controls.classList.toggle("paused", state.mode === "paused");
+}
+
 function render() {
   resizeRendererToDisplaySize();
   updateCamera(1 / 60);
   drawHud();
+  updateTouchControlsVisibility();
   renderer.render(scene, camera);
 }
 

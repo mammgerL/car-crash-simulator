@@ -153,6 +153,105 @@ canvas {
   display: none;
 }
 
+.touch-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: none;
+  pointer-events: none;
+}
+
+.touch-controls.hidden {
+  display: none;
+}
+
+.touch-steer,
+.touch-pedals,
+.touch-actions {
+  pointer-events: auto;
+}
+
+.touch-steer {
+  position: absolute;
+  left: max(22px, env(safe-area-inset-left));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  width: 142px;
+  height: 92px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(10, 12, 14, 0.54);
+  touch-action: none;
+}
+
+.touch-steer::before {
+  position: absolute;
+  inset: 50% 18px auto;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.22);
+  content: "";
+}
+
+.touch-knob {
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 24px);
+  width: 48px;
+  height: 48px;
+  transform: translate(0, -50%);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.36);
+}
+
+.touch-pedals {
+  position: absolute;
+  right: max(22px, env(safe-area-inset-right));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.touch-pedal,
+.touch-mini {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  background: rgba(10, 12, 14, 0.62);
+  touch-action: none;
+}
+
+.touch-pedal {
+  width: 76px;
+  height: 104px;
+  padding: 0;
+}
+
+.touch-pedal.gas {
+  height: 128px;
+  color: #181510;
+  background: var(--accent);
+}
+
+.touch-pedal.active,
+.touch-mini:active {
+  transform: translateY(2px);
+  filter: brightness(1.1);
+}
+
+.touch-actions {
+  position: absolute;
+  right: max(22px, env(safe-area-inset-right));
+  top: 132px;
+  display: flex;
+  gap: 8px;
+}
+
+.touch-mini {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 0.88rem;
+}
+
 .modal {
   width: min(620px, 100%);
   padding: clamp(24px, 4vw, 44px);
@@ -312,5 +411,31 @@ button.primary:focus-visible {
     bottom: 14px;
     min-width: 0;
     font-size: 0.9rem;
+  }
+}
+
+@media (pointer: coarse), (max-width: 1180px) {
+  .touch-controls:not(.hidden) {
+    display: block;
+  }
+}
+
+@media (max-width: 900px) {
+  .touch-steer {
+    width: 122px;
+    height: 80px;
+  }
+
+  .touch-pedal {
+    width: 64px;
+    height: 88px;
+  }
+
+  .touch-pedal.gas {
+    height: 108px;
+  }
+
+  .touch-actions {
+    top: 104px;
   }
 }
