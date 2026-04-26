@@ -17,8 +17,10 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Updated controls/docs for `C`/`V` view switching and noted the Three.js CDN dependency.
 - Initial 3D validation passed for chase/cockpit views, but mobile showed old 16:9 letterboxing; changed the stage to full-viewport rendering and made Three.js resize to the displayed canvas size.
 - Re-validated after the full-viewport change: chase view, cockpit view, WebGL canvas pixels, collision damage, windshield cracks, desktop screenshot, and mobile screenshot all passed with no console/page errors.
+- Upgraded the car damage model: more detailed car parts, progressive front crumple, bumper/headlight/hood/door/wheel detachment, loose part physics, smoke bursts, and cockpit hood deformation.
+- Re-validated the wreck model locally: repeated crash reached ~80% damage with 7 loose parts and no console errors; cockpit view showed damaged hood/cracks and a nonblank WebGL canvas.
 
 ## TODO
 
-- Deploy the 3D update through GitHub Actions and verify Pages.
+- Deploy the realistic wreck model through GitHub Actions and verify Pages.
 - Optional next improvements: mobile touch controls, more arenas, persistent best score.

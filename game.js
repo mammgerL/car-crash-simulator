@@ -94,20 +94,31 @@ const state = {
   skidMarks: [],
   damageMarks: [],
   damageHits: 0,
+  looseParts: [],
+  wreckLevel: 0,
+  smokeTimer: 0,
 };
 
 const meshes = {
   car: null,
   carBody: null,
+  carFront: null,
   carHood: null,
   carCabin: null,
+  carRoof: null,
   carBumper: null,
+  carRearBumper: null,
+  carDoors: [],
+  carLights: [],
+  carWheels: [],
   carDamageGroup: null,
   cockpit: null,
+  cockpitHood: null,
   cockpitCracks: [],
   obstacles: new Map(),
   particles: new Set(),
   skidMarks: new Set(),
+  looseParts: new Set(),
 };
 
 function makeBox(w, h, d, material) {
@@ -122,6 +133,26 @@ function makeCylinder(radius, height, material, segments = 28) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
+}
+
+function rememberCarPart(part) {
+  part.userData.baseTransform = {
+    position: part.position.clone(),
+    rotation: part.rotation.clone(),
+    scale: part.scale.clone(),
+  };
+  part.userData.detached = false;
+  return part;
+}
+
+function resetCarPart(part) {
+  const base = part.userData.baseTransform;
+  if (!base) return;
+  part.visible = true;
+  part.userData.detached = false;
+  part.position.copy(base.position);
+  part.rotation.copy(base.rotation);
+  part.scale.copy(base.scale);
 }
 
 function buildWorld() {
@@ -170,33 +201,91 @@ function buildWorld() {
 
 function buildCar() {
   const car = new THREE.Group();
-  const body = makeBox(3.7, 0.78, 1.72, mats.white.clone());
-  body.position.y = 0.82;
+
+  const body = makeBox(3.95, 0.62, 1.72, mats.white.clone());
+  body.position.y = 0.77;
   car.add(body);
 
-  const hood = makeBox(1.38, 0.32, 1.54, mats.red.clone());
-  hood.position.set(1.16, 1.15, 0);
+  const front = makeBox(1.18, 0.52, 1.6, mats.red.clone());
+  front.position.set(1.47, 0.92, 0);
+  car.add(front);
+
+  const hood = makeBox(1.34, 0.16, 1.46, mats.red.clone());
+  hood.position.set(1.02, 1.22, 0);
+  hood.rotation.z = -0.05;
   car.add(hood);
 
-  const cabin = makeBox(1.1, 0.66, 1.3, mats.glass.clone());
-  cabin.position.set(-0.35, 1.42, 0);
+  const windshield = makeBox(0.12, 0.62, 1.28, mats.glass.clone());
+  windshield.position.set(0.25, 1.42, 0);
+  windshield.rotation.z = -0.35;
+  car.add(windshield);
+
+  const cabin = makeBox(1.05, 0.64, 1.24, mats.glass.clone());
+  cabin.position.set(-0.43, 1.43, 0);
   car.add(cabin);
+
+  const roof = makeBox(1.06, 0.13, 1.22, mats.white.clone());
+  roof.position.set(-0.45, 1.82, 0);
+  car.add(roof);
+
+  const rearDeck = makeBox(1.12, 0.18, 1.5, mats.white.clone());
+  rearDeck.position.set(-1.45, 1.14, 0);
+  rearDeck.rotation.z = 0.04;
+  car.add(rearDeck);
+
+  const rearWindow = makeBox(0.12, 0.46, 1.18, mats.glass.clone());
+  rearWindow.position.set(-1.04, 1.42, 0);
+  rearWindow.rotation.z = 0.34;
+  car.add(rearWindow);
 
   const bumper = makeBox(0.18, 0.26, 1.82, mats.black.clone());
   bumper.position.set(1.95, 0.72, 0);
   car.add(bumper);
 
-  const rear = makeBox(0.24, 0.3, 1.6, mats.black.clone());
-  rear.position.set(-1.95, 0.72, 0);
-  car.add(rear);
+  const rearBumper = makeBox(0.22, 0.3, 1.66, mats.black.clone());
+  rearBumper.position.set(-2.03, 0.72, 0);
+  car.add(rearBumper);
 
+  const doors = [];
+  for (const z of [-0.91, 0.91]) {
+    const door = makeBox(1.18, 0.52, 0.08, mats.white.clone());
+    door.position.set(-0.38, 0.97, z);
+    door.rotation.x = z > 0 ? 0.03 : -0.03;
+    car.add(door);
+    doors.push(door);
+
+    const mirror = makeBox(0.18, 0.1, 0.18, mats.black.clone());
+    mirror.position.set(0.42, 1.25, z * 1.06);
+    car.add(mirror);
+  }
+
+  const lights = [];
+  for (const z of [-0.48, 0.48]) {
+    const light = makeBox(0.08, 0.14, 0.32, new THREE.MeshBasicMaterial({ color: 0xfff1aa }));
+    light.position.set(2.05, 0.87, z);
+    car.add(light);
+    lights.push(light);
+
+    const tail = makeBox(0.08, 0.16, 0.28, new THREE.MeshBasicMaterial({ color: 0xb91f2d }));
+    tail.position.set(-2.17, 0.87, z);
+    car.add(tail);
+    lights.push(tail);
+  }
+
+  const wheels = [];
   for (const x of [-1.1, 1.12]) {
     for (const z of [-0.98, 0.98]) {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 22), mats.tire);
-      wheel.rotation.x = Math.PI / 2;
-      wheel.position.set(x, 0.43, z);
-      wheel.castShadow = true;
-      car.add(wheel);
+      const wheelGroup = new THREE.Group();
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.24, 28), mats.tire);
+      tire.rotation.x = Math.PI / 2;
+      tire.castShadow = true;
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.27, 18), mats.metal.clone());
+      rim.rotation.x = Math.PI / 2;
+      rim.castShadow = true;
+      wheelGroup.add(tire, rim);
+      wheelGroup.position.set(x, 0.43, z);
+      car.add(wheelGroup);
+      wheels.push(wheelGroup);
     }
   }
 
@@ -206,10 +295,32 @@ function buildCar() {
 
   meshes.car = car;
   meshes.carBody = body;
+  meshes.carFront = front;
   meshes.carHood = hood;
   meshes.carCabin = cabin;
+  meshes.carRoof = roof;
   meshes.carBumper = bumper;
+  meshes.carRearBumper = rearBumper;
+  meshes.carDoors = doors;
+  meshes.carLights = lights;
+  meshes.carWheels = wheels;
   meshes.carDamageGroup = damageGroup;
+
+  [
+    body,
+    front,
+    hood,
+    windshield,
+    cabin,
+    roof,
+    rearDeck,
+    rearWindow,
+    bumper,
+    rearBumper,
+    ...doors,
+    ...lights,
+    ...wheels,
+  ].forEach(rememberCarPart);
 }
 
 function buildCockpit() {
@@ -230,6 +341,7 @@ function buildCockpit() {
   hood.position.set(0, -0.9, -2.28);
   hood.rotation.x = -0.08;
   cockpit.add(hood);
+  meshes.cockpitHood = hood;
 
   for (let i = 0; i < 10; i += 1) {
     const crack = makeBox(rand(0.16, 0.58), 0.012, 0.012, mats.crack);
@@ -348,8 +460,12 @@ function resetGame() {
   state.skidMarks = [];
   state.damageMarks = [];
   state.damageHits = 0;
+  state.looseParts = [];
+  state.wreckLevel = 0;
+  state.smokeTimer = 0;
   state.obstacles = createObstacles();
   clearDynamicMeshes();
+  resetCarVisuals();
   updateCarDamageVisuals();
   startScreen.classList.add("hidden");
   gameOverScreen.classList.add("hidden");
@@ -358,9 +474,26 @@ function resetGame() {
 function clearDynamicMeshes() {
   for (const mesh of meshes.particles) scene.remove(mesh);
   for (const mesh of meshes.skidMarks) scene.remove(mesh);
+  for (const mesh of meshes.looseParts) scene.remove(mesh);
   meshes.particles.clear();
   meshes.skidMarks.clear();
+  meshes.looseParts.clear();
   meshes.carDamageGroup.clear();
+}
+
+function resetCarVisuals() {
+  [
+    meshes.carBody,
+    meshes.carFront,
+    meshes.carHood,
+    meshes.carCabin,
+    meshes.carRoof,
+    meshes.carBumper,
+    meshes.carRearBumper,
+    ...meshes.carDoors,
+    ...meshes.carLights,
+    ...meshes.carWheels,
+  ].forEach(resetCarPart);
 }
 
 function finishGame(reason) {
@@ -480,18 +613,20 @@ function applyCollisionDamage(amount, label) {
   p.damage = clamp(p.damage + amount * 0.34, 0, 100);
   state.damageHits += 1;
   state.cameraShake = Math.max(state.cameraShake, clamp(amount * 0.33, 0.8, 5.4));
-  state.message = `${label} 撞击，新增破损`;
+  state.message = p.damage > 82 ? `${label} 重击，车辆严重损毁` : `${label} 撞击，新增破损`;
   state.messageTimer = 1.35;
   addDamageMark(amount);
+  triggerBreakage(before, p.damage, amount);
   updateCarDamageVisuals();
-  if (before < 78 && p.damage >= 78) addParticles(p.x - Math.cos(p.angle) * 0.8, p.z - Math.sin(p.angle) * 0.8, 14, 0x30363b);
+  if (before < 62 && p.damage >= 62) addSmokeBurst(18);
+  if (before < 78 && p.damage >= 78) addParticles(p.x - Math.cos(p.angle) * 0.8, p.z - Math.sin(p.angle) * 0.8, 18, 0x30363b);
 }
 
 function addDamageMark(amount) {
   const scratch = makeBox(rand(0.22, 0.72), 0.018, 0.026, mats.black.clone());
   scratch.material.transparent = true;
   scratch.material.opacity = clamp(0.38 + amount / 90, 0.42, 0.9);
-  scratch.position.set(rand(0.38, 1.62), 1.34 + rand(-0.04, 0.08), rand(-0.58, 0.58));
+  scratch.position.set(rand(0.18, 1.78), 1.08 + rand(-0.18, 0.24), rand(-0.76, 0.76));
   scratch.rotation.y = rand(-0.8, 0.8);
   scratch.rotation.z = rand(-0.45, 0.45);
   meshes.carDamageGroup.add(scratch);
@@ -502,18 +637,138 @@ function updateCarDamageVisuals() {
   const p = state.player || { damage: 0 };
   const damage = p.damage / 100;
   meshes.carBody.material.color.set(0xf4efe6).lerp(new THREE.Color(0x817f78), damage * 0.62);
+  meshes.carFront.material.color.set(0xe84855).lerp(new THREE.Color(0x4d3333), damage * 0.88);
+  meshes.carFront.scale.x = 1 - damage * 0.48;
+  meshes.carFront.scale.y = 1 - damage * 0.22;
+  meshes.carFront.position.x = 1.47 - damage * 0.48;
+  meshes.carFront.rotation.z = -damage * 0.16;
   meshes.carHood.material.color.set(0xe84855).lerp(new THREE.Color(0x4d3333), damage * 0.8);
-  meshes.carHood.scale.x = 1 - damage * 0.18;
-  meshes.carHood.scale.y = 1 - damage * 0.28;
-  meshes.carHood.position.x = 1.16 - damage * 0.16;
-  meshes.carBumper.rotation.z = damage * 0.28;
-  meshes.carBumper.position.x = 1.95 - damage * 0.22;
+  if (!meshes.carHood.userData.detached) {
+    meshes.carHood.scale.x = 1 - damage * 0.28;
+    meshes.carHood.scale.y = 1 - damage * 0.34;
+    meshes.carHood.position.x = 1.02 - damage * 0.22;
+    meshes.carHood.position.y = 1.22 + Math.max(0, damage - 0.35) * 0.55;
+    meshes.carHood.rotation.z = -0.05 - damage * 0.55;
+  }
+  if (!meshes.carBumper.userData.detached) {
+    meshes.carBumper.rotation.z = damage * 0.42;
+    meshes.carBumper.position.x = 1.95 - damage * 0.4;
+    meshes.carBumper.position.y = 0.72 - damage * 0.18;
+  }
   meshes.carCabin.material.opacity = 0.72 - damage * 0.2;
+  meshes.carRoof.rotation.z = damage > 0.7 ? rand(-0.015, 0.015) : 0;
+  if (meshes.cockpitHood) {
+    meshes.cockpitHood.material.color.set(0xe84855).lerp(new THREE.Color(0x4d3333), damage * 0.9);
+    meshes.cockpitHood.scale.x = 1 - damage * 0.2;
+    meshes.cockpitHood.scale.y = 1 - damage * 0.42;
+    meshes.cockpitHood.position.y = -0.9 + Math.max(0, damage - 0.35) * 0.5;
+    meshes.cockpitHood.rotation.x = -0.08 - damage * 0.18;
+    meshes.cockpitHood.rotation.z = damage * 0.08;
+  }
+
+  meshes.carDoors.forEach((door, index) => {
+    if (door.userData.detached) return;
+    const side = index === 0 ? -1 : 1;
+    door.rotation.y = side * damage * 0.34;
+    door.rotation.z = side * damage * 0.12;
+    door.position.x = -0.38 - damage * 0.05;
+  });
+
+  meshes.carWheels.forEach((wheel, index) => {
+    if (wheel.userData.detached) return;
+    const front = index >= 2;
+    const wobble = damage * (front ? 0.34 : 0.18);
+    wheel.rotation.z = (index % 2 === 0 ? -1 : 1) * wobble;
+    wheel.position.y = 0.43 - damage * (front ? 0.08 : 0.03);
+  });
+
+  meshes.carLights.forEach((light, index) => {
+    if (light.userData.detached) return;
+    const frontLight = index < 2;
+    light.visible = !frontLight || damage < 0.34 + index * 0.1;
+  });
 
   meshes.cockpitCracks.forEach((crack, index) => {
     crack.visible = index < Math.ceil(state.damageHits * 0.9);
     crack.material.opacity = clamp(0.35 + damage * 0.65, 0.35, 0.95);
   });
+}
+
+function triggerBreakage(previousDamage, nextDamage, amount) {
+  if (previousDamage < 18 && nextDamage >= 18) {
+    detachCarPart(meshes.carBumper, amount, "front-bumper");
+  }
+  if (previousDamage < 32 && nextDamage >= 32) {
+    detachCarPart(meshes.carLights[0], amount, "headlight-left");
+    detachCarPart(meshes.carLights[1], amount, "headlight-right");
+  }
+  if (previousDamage < 48 && nextDamage >= 48) {
+    detachCarPart(meshes.carHood, amount, "hood");
+  }
+  if (previousDamage < 64 && nextDamage >= 64) {
+    detachCarPart(meshes.carDoors[0], amount, "left-door");
+  }
+  if (previousDamage < 80 && nextDamage >= 80) {
+    detachCarPart(meshes.carWheels[2], amount, "front-wheel");
+    detachCarPart(meshes.carDoors[1], amount, "right-door");
+  }
+  state.wreckLevel = Math.max(state.wreckLevel, Math.floor(nextDamage / 20));
+}
+
+function detachCarPart(source, amount, name) {
+  if (!source || source.userData.detached) return;
+  source.userData.detached = true;
+  source.visible = false;
+
+  const part = source.clone(true);
+  part.visible = true;
+  source.getWorldPosition(part.position);
+  source.getWorldQuaternion(part.quaternion);
+  source.getWorldScale(part.scale);
+  part.traverse((child) => {
+    child.castShadow = true;
+    child.receiveShadow = true;
+  });
+  scene.add(part);
+  meshes.looseParts.add(part);
+
+  const p = state.player;
+  const fwd = forwardVector(p.angle);
+  const side = rand(-1, 1);
+  state.looseParts.push({
+    name,
+    mesh: part,
+    vx: fwd.x * rand(2.4, 6.8) + side * rand(-2.4, 2.4),
+    vy: rand(2.2, 5.8) + amount * 0.015,
+    vz: fwd.z * rand(2.4, 6.8) + side * rand(2.4, 4.8),
+    spinX: rand(-4, 4),
+    spinY: rand(-5, 5),
+    spinZ: rand(-4, 4),
+    life: 12,
+  });
+  addParticles(p.x + fwd.x * 0.9, p.z + fwd.z * 0.9, 16, 0xbfc5c8);
+}
+
+function addSmokeBurst(count) {
+  const p = state.player;
+  for (let i = 0; i < count; i += 1) {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(rand(0.12, 0.32), 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0x24282b, transparent: true, opacity: rand(0.18, 0.42) }),
+    );
+    const fwd = forwardVector(p.angle);
+    mesh.position.set(p.x + fwd.x * rand(0.3, 1.2), rand(0.95, 1.9), p.z + fwd.z * rand(0.3, 1.2));
+    scene.add(mesh);
+    meshes.particles.add(mesh);
+    state.particles.push({
+      mesh,
+      vx: rand(-0.7, 0.7),
+      vy: rand(1.4, 3.4),
+      vz: rand(-0.7, 0.7),
+      life: rand(0.8, 1.8),
+      maxLife: 1.8,
+    });
+  }
 }
 
 function updateObstacles(dt) {
@@ -592,6 +847,37 @@ function updateParticles(dt) {
   });
 }
 
+function updateLooseParts(dt) {
+  for (const part of state.looseParts) {
+    part.mesh.position.x += part.vx * dt;
+    part.mesh.position.y += part.vy * dt;
+    part.mesh.position.z += part.vz * dt;
+    part.vy -= 9.8 * dt;
+    part.vx *= 0.992;
+    part.vz *= 0.992;
+    part.mesh.rotation.x += part.spinX * dt;
+    part.mesh.rotation.y += part.spinY * dt;
+    part.mesh.rotation.z += part.spinZ * dt;
+    if (part.mesh.position.y < 0.16) {
+      part.mesh.position.y = 0.16;
+      part.vy *= -0.24;
+      part.vx *= 0.82;
+      part.vz *= 0.82;
+      part.spinX *= 0.76;
+      part.spinY *= 0.76;
+      part.spinZ *= 0.76;
+    }
+    part.life -= dt;
+  }
+
+  state.looseParts = state.looseParts.filter((part) => {
+    if (part.life > 0) return true;
+    scene.remove(part.mesh);
+    meshes.looseParts.delete(part.mesh);
+    return false;
+  });
+}
+
 function updateCarMesh() {
   const p = state.player;
   meshes.car.position.set(p.x, 0, p.z);
@@ -638,6 +924,14 @@ function update(dt) {
   updateObstacles(simDt);
   collidePlayerWithObstacles();
   updateParticles(dt);
+  updateLooseParts(dt);
+  if (state.player.damage > 58) {
+    state.smokeTimer -= dt;
+    if (state.smokeTimer <= 0) {
+      addSmokeBurst(state.player.damage > 84 ? 4 : 2);
+      state.smokeTimer = state.player.damage > 84 ? 0.18 : 0.34;
+    }
+  }
   updateCarMesh();
 
   if (state.player.damage >= 100) finishGame("totaled");
@@ -657,7 +951,7 @@ function drawHud() {
       <span>剩余 ${Math.max(0, Math.ceil(state.timeLeft))}s</span>
       <span>视角 ${view}</span>
       <i style="--damage:${p.damage}%;--damage-color:${damageColor}"></i>
-      <small>车损 ${Math.round(p.damage)}% / 破损 ${state.damageHits}</small>
+      <small>车损 ${Math.round(p.damage)}% / 撞痕 ${state.damageHits} / 脱落 ${state.looseParts.length}</small>
     </div>
     <div class="hud-card right">
       <strong>连击 x${state.combo.toFixed(1)}</strong>
@@ -748,6 +1042,8 @@ function renderGameToText() {
     score: Math.round(state.score),
     combo: Number(state.combo.toFixed(2)),
     damageHits: state.damageHits,
+    wreckLevel: state.wreckLevel,
+    looseParts: state.looseParts.length,
     player: p
       ? {
           x: Number(p.x.toFixed(2)),
