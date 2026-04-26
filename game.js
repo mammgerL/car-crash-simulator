@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GLTFLoader } from "https://unpkg.com/three@0.164.1/examples/jsm/loaders/GLTFLoader.js";
 
 const canvas = document.getElementById("game");
 const startScreen = document.getElementById("start-screen");
@@ -18,6 +19,7 @@ const WORLD = {
 
 const keys = new Set();
 const tmp = new THREE.Vector3();
+const gltfLoader = new GLTFLoader();
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
 const rand = (min, max) => min + Math.random() * (max - min);
@@ -96,6 +98,10 @@ const VEHICLES = {
     handling: 3.2,
     radius: 1.38,
     style: "sport",
+    model: "assets/models/kenney-car-kit/sedan-sports.glb",
+    modelScale: 0.86,
+    modelYOffset: 0.06,
+    modelRotationY: Math.PI,
   },
   suv: {
     id: "suv",
@@ -115,6 +121,10 @@ const VEHICLES = {
     handling: 2.45,
     radius: 1.58,
     style: "suv",
+    model: "assets/models/kenney-car-kit/suv.glb",
+    modelScale: 0.9,
+    modelYOffset: 0.08,
+    modelRotationY: Math.PI,
   },
   pickup: {
     id: "pickup",
@@ -134,6 +144,10 @@ const VEHICLES = {
     handling: 2.08,
     radius: 1.72,
     style: "pickup",
+    model: "assets/models/kenney-car-kit/truck.glb",
+    modelScale: 0.9,
+    modelYOffset: 0.08,
+    modelRotationY: Math.PI,
   },
   police: {
     id: "police",
@@ -153,6 +167,10 @@ const VEHICLES = {
     handling: 2.85,
     radius: 1.46,
     style: "police",
+    model: "assets/models/kenney-car-kit/police.glb",
+    modelScale: 0.88,
+    modelYOffset: 0.06,
+    modelRotationY: Math.PI,
   },
 };
 
@@ -196,6 +214,7 @@ const meshes = {
   carDoors: [],
   carLights: [],
   carWheels: [],
+  carExternalModel: null,
   carDamageGroup: null,
   cockpit: null,
   cockpitHood: null,
@@ -238,6 +257,72 @@ function resetCarPart(part) {
   part.position.copy(base.position);
   part.rotation.copy(base.rotation);
   part.scale.copy(base.scale);
+}
+
+function loadExternalVehicleModel(vehicle, car) {
+  if (!vehicle.model) return;
+  gltfLoader.load(
+    vehicle.model,
+    (gltf) => {
+      if (meshes.car !== car || state.selectedVehicleId !== vehicle.id) return;
+      if (meshes.carExternalModel) car.remove(meshes.carExternalModel);
+      const model = gltf.scene;
+      model.name = `external-${vehicle.id}`;
+      model.position.set(0, vehicle.modelYOffset || 0, 0);
+      model.rotation.y = vehicle.modelRotationY || 0;
+      model.scale.setScalar(vehicle.modelScale || 1);
+      model.traverse((child) => {
+        if (!child.isMesh) return;
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          child.material = child.material.clone();
+          child.material.roughness = Math.min(0.72, child.material.roughness ?? 0.6);
+          child.material.metalness = Math.max(0.04, child.material.metalness ?? 0.02);
+        }
+      });
+      car.add(model);
+      meshes.carExternalModel = model;
+      window.__debug_external_model_loaded = vehicle.id;
+      setProceduralShellVisible(false);
+      render();
+    },
+    undefined,
+    () => {
+      window.__debug_external_model_loaded = false;
+      state.message = "外部车模加载失败，使用内置车身";
+      state.messageTimer = 1.6;
+    },
+  );
+}
+
+function updateExternalVehicleDamage(damage) {
+  if (!meshes.carExternalModel) return;
+  meshes.carExternalModel.scale.x = (meshes.carProfile.vehicle.modelScale || 1) * (1 - damage * 0.08);
+  meshes.carExternalModel.scale.y = (meshes.carProfile.vehicle.modelScale || 1) * (1 - damage * 0.04);
+  meshes.carExternalModel.rotation.z = damage > 0.65 ? rand(-0.012, 0.012) : 0;
+  meshes.carExternalModel.traverse((child) => {
+    if (!child.isMesh || !child.material?.color) return;
+    if (!child.userData.baseColor) child.userData.baseColor = child.material.color.clone();
+    child.material.color.copy(child.userData.baseColor).lerp(new THREE.Color(0x6f6f6a), damage * 0.32);
+  });
+}
+
+function setProceduralShellVisible(visible) {
+  [
+    meshes.carBody,
+    meshes.carFront,
+    meshes.carHood,
+    meshes.carCabin,
+    meshes.carRoof,
+    meshes.carBumper,
+    meshes.carRearBumper,
+    ...meshes.carDoors,
+    ...meshes.carLights,
+    ...meshes.carWheels,
+  ].forEach((part) => {
+    if (part && !part.userData.detached) part.visible = visible;
+  });
 }
 
 function buildWorld() {
@@ -286,6 +371,7 @@ function buildWorld() {
 
 function buildCar() {
   if (meshes.car) scene.remove(meshes.car);
+  meshes.carExternalModel = null;
   meshes.carDoors = [];
   meshes.carLights = [];
   meshes.carWheels = [];
@@ -433,6 +519,8 @@ function buildCar() {
     bumperBase: bumper.position.clone(),
     doorBase: doors.map((door) => door.position.clone()),
   };
+
+  loadExternalVehicleModel(vehicle, car);
 
   [
     body,
@@ -624,6 +712,7 @@ function resetCarVisuals() {
     ...meshes.carLights,
     ...meshes.carWheels,
   ].forEach(resetCarPart);
+  if (meshes.carExternalModel) setProceduralShellVisible(false);
 }
 
 function finishGame(reason) {
@@ -821,6 +910,8 @@ function updateCarDamageVisuals() {
     const frontLight = index < 2;
     light.visible = !frontLight || damage < 0.34 + index * 0.1;
   });
+
+  updateExternalVehicleDamage(damage);
 
   meshes.cockpitCracks.forEach((crack, index) => {
     crack.visible = index < Math.ceil(state.damageHits * 0.9);

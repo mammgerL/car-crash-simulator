@@ -31,4 +31,9 @@ python3 -m http.server 5173
 
 ## 车辆模型
 
-当前版本使用程序化 3D 车辆，不包含外部车模文件。后续可以替换为授权明确的 `.glb/.gltf` 车辆模型；公开部署时优先选择 CC0/Public Domain，或按 CC-BY 要求在页面和 README 标注作者。
+当前版本引入了 Kenney Car Kit 的外部 `.glb` 车辆模型，并保留程序化碰撞/损坏部件作为车模加载失败时的兜底。
+
+- 来源：https://www.kenney.nl/assets/car-kit
+- 作者：Kenney
+- 授权：Creative Commons Zero, CC0
+- 本地许可证文件：`assets/models/kenney-car-kit/License.txt`

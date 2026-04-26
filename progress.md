@@ -22,7 +22,10 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Deployed commit `4b6bbd4` through GitHub Actions successfully and verified Pages returned HTTP 200.
 - Added vehicle selection with four procedural vehicle types: sport sedan, SUV, pickup, and police car. Each has different size, mass, durability, acceleration, max speed, and handling. Validated all four choices in Playwright with no console errors.
 - Researched free model options: CC0/Public Domain is safest for public GitHub Pages; CC-BY can work if attribution is added. Good candidates include explicit CC0 Sketchfab models, Pixabay GLB models, and CC0 game asset libraries such as Quaternius/Kenney-style packs.
+- Imported external vehicle GLB files from Kenney Car Kit 3.1 (`sedan-sports`, `suv`, `truck`, `police`) into `assets/models/kenney-car-kit/`. License is CC0; copied `License.txt`. Added `GLTFLoader` and uses the external model as the visible shell with procedural damage parts as fallback/detachable wreckage.
+- Fixed Kenney GLB texture loading by copying `Textures/colormap.png`. Validated all four external GLB vehicles in Playwright: model loaded marker matched the selected vehicle, no request failures, no console errors, nonblank WebGL screenshots.
 
 ## TODO
 
-- Optional next improvements: import licensed GLB car models, mobile touch controls, more arenas, persistent best score.
+- Deploy external GLB vehicle update through GitHub Actions and verify Pages.
+- Optional next improvements: higher-detail licensed GLB models, mobile touch controls, more arenas, persistent best score.
