@@ -26,8 +26,9 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Fixed Kenney GLB texture loading by copying `Textures/colormap.png`. Validated all four external GLB vehicles in Playwright: model loaded marker matched the selected vehicle, no request failures, no console errors, nonblank WebGL screenshots.
 - Added tablet/touch controls: on-screen steering pad, gas, brake, view, pause, and restart controls. Touch input feeds the same driving logic as keyboard input.
 - Validated tablet controls on an iPad Pro landscape profile: controls were visible, gas moved the vehicle, view switched to cockpit, pause entered paused mode, restart reset score/damage, and there were no console/page errors.
+- Replaced the police vehicle with Kay Lousberg's CC0 Poly Pizza Police Car GLB and updated local license/source notes. Validated the police model locally in Playwright: the GLB loaded, chase/cockpit view switching worked, driving and impact damage worked, iPad landscape touch controls stayed visible, and there were no request failures or console errors.
 
 ## TODO
 
-- Deploy tablet controls through GitHub Actions and verify Pages.
-- Optional next improvements: higher-detail licensed GLB models, mobile touch controls, more arenas, persistent best score.
+- Deploy the police model replacement through GitHub Actions and verify Pages.
+- Optional next improvements: higher-detail licensed GLB models, more arenas, persistent best score.

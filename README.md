@@ -32,9 +32,13 @@ python3 -m http.server 5173
 
 ## 车辆模型
 
-当前版本引入了 Kenney Car Kit 的外部 `.glb` 车辆模型，并保留程序化碰撞/损坏部件作为车模加载失败时的兜底。
+当前版本引入了外部 `.glb` 车辆模型，并保留程序化碰撞/损坏部件作为车模加载失败时的兜底。
 
 - 来源：https://www.kenney.nl/assets/car-kit
 - 作者：Kenney
 - 授权：Creative Commons Zero, CC0
 - 本地许可证文件：`assets/models/kenney-car-kit/License.txt`
+- 警车来源：https://poly.pizza/m/Uj7i2vlmir
+- 警车作者：Kay Lousberg
+- 警车授权：Creative Commons Zero v1.0 Universal, CC0 1.0
+- 警车本地许可证文件：`assets/models/polypizza-kay-lousberg-police-car.LICENSE.txt`

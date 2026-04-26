@@ -172,10 +172,10 @@ const VEHICLES = {
     handling: 2.85,
     radius: 1.46,
     style: "police",
-    model: "assets/models/kenney-car-kit/police.glb",
-    modelScale: 0.88,
-    modelYOffset: 0.06,
-    modelRotationY: Math.PI,
+    model: "assets/models/polypizza-kay-lousberg-police-car.glb",
+    modelScale: 4.25,
+    modelYOffset: 0.16,
+    modelRotationY: Math.PI / 2,
   },
 };
 
