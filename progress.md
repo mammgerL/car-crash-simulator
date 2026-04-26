@@ -20,7 +20,9 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Upgraded the car damage model: more detailed car parts, progressive front crumple, bumper/headlight/hood/door/wheel detachment, loose part physics, smoke bursts, and cockpit hood deformation.
 - Re-validated the wreck model locally: repeated crash reached ~80% damage with 7 loose parts and no console errors; cockpit view showed damaged hood/cracks and a nonblank WebGL canvas.
 - Deployed commit `4b6bbd4` through GitHub Actions successfully and verified Pages returned HTTP 200.
+- Added vehicle selection with four procedural vehicle types: sport sedan, SUV, pickup, and police car. Each has different size, mass, durability, acceleration, max speed, and handling. Validated all four choices in Playwright with no console errors.
+- Researched free model options: CC0/Public Domain is safest for public GitHub Pages; CC-BY can work if attribution is added. Good candidates include explicit CC0 Sketchfab models, Pixabay GLB models, and CC0 game asset libraries such as Quaternius/Kenney-style packs.
 
 ## TODO
 
-- Optional next improvements: mobile touch controls, more arenas, persistent best score.
+- Optional next improvements: import licensed GLB car models, mobile touch controls, more arenas, persistent best score.

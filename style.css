@@ -201,7 +201,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 26px 0 28px;
+  margin: 26px 0 16px;
 }
 
 .controls span {
@@ -213,6 +213,28 @@ h2 {
   background: rgba(255, 255, 255, 0.06);
   font-size: 0.9rem;
   white-space: nowrap;
+}
+
+.vehicle-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 28px;
+}
+
+.vehicle-option {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  color: #e7e1d4;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.88rem;
+}
+
+.vehicle-option.active {
+  border-color: rgba(242, 193, 78, 0.8);
+  color: #191711;
+  background: var(--accent);
 }
 
 button {
@@ -258,6 +280,10 @@ button.primary:focus-visible {
 
   .modal {
     padding: 22px;
+  }
+
+  .vehicle-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hud-card,

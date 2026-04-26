@@ -12,6 +12,7 @@ python3 -m http.server 5173
 
 ## 操作
 
+- 开始界面：选择 `运动轿车`、`SUV`、`皮卡` 或 `警用车`
 - `WASD` 或方向键：驾驶
 - `Space`：刹车
 - `C` 或 `V`：切换追车视角 / 车内视角
@@ -27,3 +28,7 @@ python3 -m http.server 5173
 4. 推送到 `main` 后，`.github/workflows/pages.yml` 会自动发布。
 
 项目没有构建步骤，`index.html`、`style.css` 和 `game.js` 放在仓库根目录即可。游戏通过 CDN 加载 Three.js。
+
+## 车辆模型
+
+当前版本使用程序化 3D 车辆，不包含外部车模文件。后续可以替换为授权明确的 `.glb/.gltf` 车辆模型；公开部署时优先选择 CC0/Public Domain，或按 CC-BY 要求在页面和 README 标注作者。
