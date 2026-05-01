@@ -44,6 +44,8 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Validation: `node --check game.js` passed.
 - Follow-up heading fix: Playwright screenshots showed sport/SUV/police were aligned, but the Humvee pickup was still sideways at `Math.PI / 2`; `0` made it drive backward, and `Math.PI` made chase view show the rear with the vehicle moving forward. Updated pickup `modelRotationY` to `Math.PI`.
 - Validation: `node --check game.js` passed, ran the develop-web-game Playwright client for all four vehicles, visually inspected screenshots, and no `errors-*.json` files were generated.
+- External-view steering fix: user reported chase/external view left-right steering was visually reversed while cockpit view was correct. Changed the visible car group rotation from `-p.angle` to `p.angle`; cockpit camera and physics still use `forwardVector(p.angle)`.
+- Validation: `node --check game.js` passed, ran develop-web-game Playwright right-turn and left-turn checks in chase view, inspected screenshots, and no `errors-*.json` files were generated.
 
 ## TODO
 

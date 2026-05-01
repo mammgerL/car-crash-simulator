@@ -1318,7 +1318,7 @@ function updateLooseParts(dt) {
 function updateCarMesh() {
   const p = state.player;
   meshes.car.position.set(p.x, 0, p.z);
-  meshes.car.rotation.y = -p.angle;
+  meshes.car.rotation.y = p.angle;
   meshes.car.visible = state.viewMode !== "cockpit" || state.mode !== "playing";
 }
 
