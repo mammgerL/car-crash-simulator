@@ -42,6 +42,8 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Added persistent front/rear direction markers (front warm white, rear red) so heading is always distinguishable.
 - Recalibrated `modelRotationY` defaults for all four vehicles so visual heading better matches movement with arrow-key steering.
 - Validation: `node --check game.js` passed.
+- Follow-up heading fix: Playwright screenshots showed sport/SUV/police were aligned, but the Humvee pickup was still sideways at `Math.PI / 2`; `0` made it drive backward, and `Math.PI` made chase view show the rear with the vehicle moving forward. Updated pickup `modelRotationY` to `Math.PI`.
+- Validation: `node --check game.js` passed, ran the develop-web-game Playwright client for all four vehicles, visually inspected screenshots, and no `errors-*.json` files were generated.
 
 ## TODO
 

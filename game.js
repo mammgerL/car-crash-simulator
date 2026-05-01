@@ -152,7 +152,7 @@ const VEHICLES = {
     model: "assets/models/poly-pizza-realistic/humvee.glb",
     modelScale: 1,
     modelYOffset: 0.06,
-    modelRotationY: Math.PI / 2,
+    modelRotationY: Math.PI,
   },
   police: {
     id: "police",
