@@ -1432,7 +1432,7 @@ function updateCamera(dt) {
     meshes.cockpit.visible = true;
   } else {
     if (!Number.isFinite(state.cameraYaw)) state.cameraYaw = p.angle;
-    state.cameraYaw = lerpAngle(state.cameraYaw, p.angle, state.mode === "playing" ? dt * 3.2 : 1);
+    state.cameraYaw = lerpAngle(state.cameraYaw, p.angle, state.mode === "playing" ? dt * 0.75 : 1);
     const chaseFwd = forwardVector(state.cameraYaw);
     const desired = new THREE.Vector3(p.x, 5.9, p.z).addScaledVector(chaseFwd, -10.2);
     desired.x += sx;

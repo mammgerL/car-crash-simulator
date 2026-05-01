@@ -55,6 +55,8 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Revised chase camera after user clarified it should face forward with the car's heading: added `cameraYaw` with angle interpolation so the chase camera follows the car's forward direction with slight lag, making the car visibly turn before the camera catches up.
 - Added a version query to `index.html`'s `game.js` module URL to bypass GitHub Pages/browser caching after camera changes.
 - Validation: `node --check game.js` passed, ran develop-web-game right-turn and left-turn checks, inspected `output/chase-follow-right/*.png` and `output/chase-follow-left/shot-0.png`, and no `errors-*.json` files were generated.
+- Follow-up chase camera tuning: user still perceived left/right as camera movement. Slowed chase camera yaw follow from `dt * 3.2` to `dt * 0.75` so the car visibly rotates first while the camera still eventually follows the car heading. Updated the script version query to bypass cache again.
+- Validation: `node --check game.js` passed, ran develop-web-game right-turn and left-turn checks, inspected `output/chase-lag-right/*.png` and `output/chase-lag-left/shot-0.png`, and no `errors-*.json` files were generated.
 
 ## TODO
 
