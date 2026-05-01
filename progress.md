@@ -50,6 +50,8 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Added many other vehicles as collision obstacles, including lane-parked and cross-parked cars, while keeping a few barrels/tires/barriers for variety. `render_game_to_text` now exposes more visible obstacles for testing.
 - Reduced total-loss rate by increasing per-vehicle durability and lowering collision-to-damage scaling. Validation run had 4 impacts with about 22% player damage, instead of approaching total loss.
 - Validation: `node --check game.js` passed, ran develop-web-game Playwright driving check in chase view, inspected `output/city-update/shot-0.png` and `shot-1.png`, and no `errors-*.json` files were generated.
+- Fixed chase camera steering feel: external view now uses a fixed world-space follow offset instead of rotating around the car's heading, so the city stays visually stable while the car changes direction. Cockpit view still uses `forwardVector(p.angle)`.
+- Validation: `node --check game.js` passed, ran develop-web-game right-turn and left-turn checks, inspected `output/fixed-camera-right/shot-0.png` and `output/fixed-camera-left/shot-0.png`, and no `errors-*.json` files were generated.
 
 ## TODO
 

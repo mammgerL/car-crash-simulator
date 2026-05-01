@@ -1428,12 +1428,12 @@ function updateCamera(dt) {
     camera.lookAt(p.x + fwd.x * 12, 1.82, p.z + fwd.z * 12);
     meshes.cockpit.visible = true;
   } else {
-    const target = tmp.set(p.x, 1.4, p.z);
-    const desired = new THREE.Vector3(p.x, 4.9, p.z).addScaledVector(fwd, -8.8);
+    const target = tmp.set(p.x + 1.6, 1.35, p.z);
+    const desired = new THREE.Vector3(p.x - 8.8, 5.4, p.z + 7.2);
     desired.x += sx;
     desired.y += sy;
     camera.position.lerp(desired, clamp(dt * 7, 0.2, 1));
-    camera.lookAt(target.addScaledVector(fwd, 2.4));
+    camera.lookAt(target);
     meshes.cockpit.visible = false;
   }
 }
