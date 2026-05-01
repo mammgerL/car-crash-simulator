@@ -27,6 +27,7 @@ const touchControls = {
 };
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
+const lerpAngle = (from, to, t) => from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * clamp(t, 0, 1);
 const rand = (min, max) => min + Math.random() * (max - min);
 
 const renderer = new THREE.WebGLRenderer({
@@ -193,6 +194,7 @@ const state = {
   combo: 1,
   comboTimer: 0,
   cameraShake: 0,
+  cameraYaw: 0,
   slowMo: 0,
   message: "",
   messageTimer: 0,
@@ -968,6 +970,7 @@ function resetGame() {
   state.message = "城市道路已开放";
   state.messageTimer = 2.2;
   state.player = makePlayer();
+  state.cameraYaw = state.player.angle;
   state.particles = [];
   state.skidMarks = [];
   state.damageMarks = [];
@@ -1428,12 +1431,14 @@ function updateCamera(dt) {
     camera.lookAt(p.x + fwd.x * 12, 1.82, p.z + fwd.z * 12);
     meshes.cockpit.visible = true;
   } else {
-    const target = tmp.set(p.x + 1.6, 1.35, p.z);
-    const desired = new THREE.Vector3(p.x - 8.8, 5.4, p.z + 7.2);
+    if (!Number.isFinite(state.cameraYaw)) state.cameraYaw = p.angle;
+    state.cameraYaw = lerpAngle(state.cameraYaw, p.angle, state.mode === "playing" ? dt * 3.2 : 1);
+    const chaseFwd = forwardVector(state.cameraYaw);
+    const desired = new THREE.Vector3(p.x, 5.9, p.z).addScaledVector(chaseFwd, -10.2);
     desired.x += sx;
     desired.y += sy;
-    camera.position.lerp(desired, clamp(dt * 7, 0.2, 1));
-    camera.lookAt(target);
+    camera.position.lerp(desired, clamp(dt * 7.5, 0.22, 1));
+    camera.lookAt(p.x + chaseFwd.x * 5.2, 1.25, p.z + chaseFwd.z * 5.2);
     meshes.cockpit.visible = false;
   }
 }

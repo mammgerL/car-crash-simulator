@@ -52,6 +52,9 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Validation: `node --check game.js` passed, ran develop-web-game Playwright driving check in chase view, inspected `output/city-update/shot-0.png` and `shot-1.png`, and no `errors-*.json` files were generated.
 - Fixed chase camera steering feel: external view now uses a fixed world-space follow offset instead of rotating around the car's heading, so the city stays visually stable while the car changes direction. Cockpit view still uses `forwardVector(p.angle)`.
 - Validation: `node --check game.js` passed, ran develop-web-game right-turn and left-turn checks, inspected `output/fixed-camera-right/shot-0.png` and `output/fixed-camera-left/shot-0.png`, and no `errors-*.json` files were generated.
+- Revised chase camera after user clarified it should face forward with the car's heading: added `cameraYaw` with angle interpolation so the chase camera follows the car's forward direction with slight lag, making the car visibly turn before the camera catches up.
+- Added a version query to `index.html`'s `game.js` module URL to bypass GitHub Pages/browser caching after camera changes.
+- Validation: `node --check game.js` passed, ran develop-web-game right-turn and left-turn checks, inspected `output/chase-follow-right/*.png` and `output/chase-follow-left/shot-0.png`, and no `errors-*.json` files were generated.
 
 ## TODO
 
