@@ -28,6 +28,20 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Validated tablet controls on an iPad Pro landscape profile: controls were visible, gas moved the vehicle, view switched to cockpit, pause entered paused mode, restart reset score/damage, and there were no console/page errors.
 - Replaced the police vehicle with Kay Lousberg's CC0 Poly Pizza Police Car GLB and updated local license/source notes. Validated the police model locally in Playwright: the GLB loaded, chase/cockpit view switching worked, driving and impact damage worked, iPad landscape touch controls stayed visible, and there were no request failures or console errors.
 - Deployed the police model replacement through GitHub Actions and verified GitHub Pages served both the game page and the new police GLB with HTTP 200.
+- Added runtime WebAudio sound system: procedural engine loop, collision impact/crash sounds, and UI tones for start/pause/view/end states. Added `M` key mute toggle and HUD/start-screen sound status hints.
+- Validated post-audio build with develop-web-game Playwright client (`output/web-game-sound`): gameplay screenshots/states generated, `audioEnabled` surfaced in text state, and no console/page errors were emitted.
+- Ran an extra Playwright keyboard check from the skill runtime to verify `M` mute toggle: `audioEnabled` switched `true -> false -> true` and in-game message updated correctly.
+- Updated README controls list to include `M` sound toggle so docs match runtime behavior.
+- Replaced the four active vehicle GLB models with more realistic Poly Pizza models: supercar (sport), Range Rover (SUV), Humvee (pickup slot), and Dodge Charger (police slot). Added new assets under `assets/models/poly-pizza-realistic/`.
+- Added local attribution file `assets/models/poly-pizza-realistic/ATTRIBUTION.txt` with model title, creator, source URL, download URL, and CC-BY 3.0 license link.
+- Updated external model transform support with optional `modelRotationX` / `modelRotationZ` and recalibrated per-vehicle scale/offset/rotation values (including tiny-unit supercar normalization from GLB bounds).
+- Fixed residual procedural shell overlay when external GLBs are loaded by tracking extra shell parts (windshield/rear deck/mirrors/spoiler/rails/police add-ons) and hiding/resetting them together with the main shell.
+- Validated with develop-web-game Playwright client (`output/web-game-models-regression`) plus per-vehicle Playwright screenshots (`output/web-game-models/vehicle-*.png`): all four external models load (`window.__debug_external_model_loaded` matched each selection), orientations/scales are correct in chase view, and no console/page errors were emitted.
+- Re-downloaded all four Poly Pizza realistic GLB assets to ensure local files are complete and not stale.
+- Updated external GLB material handling to use `THREE.DoubleSide`, reducing missing-face artifacts on single-sided geometry.
+- Added persistent front/rear direction markers (front warm white, rear red) so heading is always distinguishable.
+- Recalibrated `modelRotationY` defaults for all four vehicles so visual heading better matches movement with arrow-key steering.
+- Validation: `node --check game.js` passed.
 
 ## TODO
 

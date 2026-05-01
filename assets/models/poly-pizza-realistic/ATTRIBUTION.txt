@@ -1,0 +1,26 @@
+Realistic vehicle models are sourced from Poly Pizza and licensed under CC-BY 3.0.
+License: https://creativecommons.org/licenses/by/3.0/
+
+1) supercar.glb
+   Title: CAR Model
+   Creator: Ignition Labs
+   Source: https://poly.pizza/m/5zUWP5UsLg-
+   Download: https://static.poly.pizza/f8c6bcd5-92a2-4f88-b821-64935a00216f.glb
+
+2) range-rover.glb
+   Title: Range Rover
+   Creator: IvOfficial
+   Source: https://poly.pizza/m/8zk4o6nALW
+   Download: https://static.poly.pizza/139b654a-14c7-4483-960a-5a02615e1af7.glb
+
+3) humvee.glb
+   Title: Humvee
+   Creator: madtrollstudio
+   Source: https://poly.pizza/m/Ebryot9iKM
+   Download: https://static.poly.pizza/db098fcf-17c7-4815-8407-027cd6341110.glb
+
+4) dodge-charger.glb
+   Title: Dodge Charger
+   Creator: David Sirera
+   Source: https://poly.pizza/m/4b80hRVxqvv
+   Download: https://static.poly.pizza/87d07a91-9367-402b-ac76-205fa4e3271b.glb

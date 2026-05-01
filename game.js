@@ -103,10 +103,10 @@ const VEHICLES = {
     handling: 3.2,
     radius: 1.38,
     style: "sport",
-    model: "assets/models/kenney-car-kit/sedan-sports.glb",
-    modelScale: 0.86,
-    modelYOffset: 0.06,
-    modelRotationY: Math.PI,
+    model: "assets/models/poly-pizza-realistic/supercar.glb",
+    modelScale: 0.01,
+    modelYOffset: 0,
+    modelRotationY: 0,
   },
   suv: {
     id: "suv",
@@ -126,10 +126,10 @@ const VEHICLES = {
     handling: 2.45,
     radius: 1.58,
     style: "suv",
-    model: "assets/models/kenney-car-kit/suv.glb",
-    modelScale: 0.9,
-    modelYOffset: 0.08,
-    modelRotationY: Math.PI,
+    model: "assets/models/poly-pizza-realistic/range-rover.glb",
+    modelScale: 1,
+    modelYOffset: 1.33,
+    modelRotationY: 0,
   },
   pickup: {
     id: "pickup",
@@ -149,10 +149,10 @@ const VEHICLES = {
     handling: 2.08,
     radius: 1.72,
     style: "pickup",
-    model: "assets/models/kenney-car-kit/truck.glb",
-    modelScale: 0.9,
-    modelYOffset: 0.08,
-    modelRotationY: Math.PI,
+    model: "assets/models/poly-pizza-realistic/humvee.glb",
+    modelScale: 1,
+    modelYOffset: 0.06,
+    modelRotationY: Math.PI / 2,
   },
   police: {
     id: "police",
@@ -172,10 +172,10 @@ const VEHICLES = {
     handling: 2.85,
     radius: 1.46,
     style: "police",
-    model: "assets/models/polypizza-kay-lousberg-police-car.glb",
-    modelScale: 4.25,
-    modelYOffset: 0.16,
-    modelRotationY: Math.PI / 2,
+    model: "assets/models/poly-pizza-realistic/dodge-charger.glb",
+    modelScale: 1,
+    modelYOffset: 0.37,
+    modelRotationY: 0,
   },
 };
 
@@ -203,8 +203,176 @@ const state = {
   smokeTimer: 0,
 };
 
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const audio = {
+  supported: Boolean(AudioContextClass),
+  initialized: false,
+  enabled: true,
+  ctx: null,
+  master: null,
+  engineOscA: null,
+  engineOscB: null,
+  engineGain: null,
+  noiseBuffer: null,
+  lastImpactTime: 0,
+};
+
 function currentVehicle() {
   return VEHICLES[state.selectedVehicleId] || VEHICLES.sport;
+}
+
+function initAudio() {
+  if (!audio.supported || audio.initialized) return;
+  const ctx = new AudioContextClass();
+  const master = ctx.createGain();
+  master.gain.value = 0.6;
+  master.connect(ctx.destination);
+
+  const engineFilter = ctx.createBiquadFilter();
+  engineFilter.type = "lowpass";
+  engineFilter.frequency.value = 900;
+  engineFilter.Q.value = 0.8;
+
+  const engineGain = ctx.createGain();
+  engineGain.gain.value = 0;
+
+  const engineOscA = ctx.createOscillator();
+  engineOscA.type = "sawtooth";
+  engineOscA.frequency.value = 45;
+  const engineOscB = ctx.createOscillator();
+  engineOscB.type = "triangle";
+  engineOscB.frequency.value = 92;
+
+  engineOscA.connect(engineFilter);
+  engineOscB.connect(engineFilter);
+  engineFilter.connect(engineGain);
+  engineGain.connect(master);
+  engineOscA.start();
+  engineOscB.start();
+
+  const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.35), ctx.sampleRate);
+  const channel = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < channel.length; i += 1) {
+    const fade = 1 - i / channel.length;
+    channel[i] = (Math.random() * 2 - 1) * fade * fade;
+  }
+
+  audio.initialized = true;
+  audio.ctx = ctx;
+  audio.master = master;
+  audio.engineOscA = engineOscA;
+  audio.engineOscB = engineOscB;
+  audio.engineGain = engineGain;
+  audio.noiseBuffer = noiseBuffer;
+}
+
+function ensureAudioActive() {
+  if (!audio.enabled) return;
+  initAudio();
+  if (!audio.ctx) return;
+  if (audio.ctx.state === "suspended") audio.ctx.resume().catch(() => {});
+}
+
+function setAudioEnabled(enabled, showMessage = true) {
+  if (!audio.supported) {
+    if (showMessage) {
+      state.message = "当前浏览器不支持网页音频";
+      state.messageTimer = 1.6;
+    }
+    return;
+  }
+  audio.enabled = enabled;
+  initAudio();
+  if (!audio.ctx || !audio.master) return;
+  if (enabled) ensureAudioActive();
+  const now = audio.ctx.currentTime;
+  audio.master.gain.cancelScheduledValues(now);
+  audio.master.gain.setTargetAtTime(enabled ? 0.6 : 0.0001, now, 0.03);
+  if (showMessage) {
+    state.message = enabled ? "声音已开启" : "声音已关闭";
+    state.messageTimer = 1.1;
+  }
+}
+
+function toggleAudio() {
+  setAudioEnabled(!audio.enabled, true);
+}
+
+function playUiTone(freq, duration = 0.09, level = 0.04, type = "triangle") {
+  if (!audio.enabled) return;
+  ensureAudioActive();
+  if (!audio.ctx || !audio.master || audio.ctx.state !== "running") return;
+  const now = audio.ctx.currentTime;
+  const osc = audio.ctx.createOscillator();
+  const gain = audio.ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, now);
+  gain.gain.setValueAtTime(level, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.connect(gain);
+  gain.connect(audio.master);
+  osc.start(now);
+  osc.stop(now + duration);
+}
+
+function playImpact(amount) {
+  if (!audio.enabled) return;
+  ensureAudioActive();
+  if (!audio.ctx || !audio.master || !audio.noiseBuffer || audio.ctx.state !== "running") return;
+  const nowMs = performance.now();
+  if (nowMs - audio.lastImpactTime < 70) return;
+  audio.lastImpactTime = nowMs;
+
+  const now = audio.ctx.currentTime;
+  const noise = audio.ctx.createBufferSource();
+  noise.buffer = audio.noiseBuffer;
+  noise.playbackRate.value = clamp(1 + amount / 110, 0.9, 2.3);
+
+  const band = audio.ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = clamp(420 + amount * 45, 420, 2600);
+  band.Q.value = 0.8;
+
+  const thud = audio.ctx.createOscillator();
+  thud.type = "triangle";
+  thud.frequency.setValueAtTime(clamp(90 + amount * 2.6, 90, 220), now);
+  thud.frequency.exponentialRampToValueAtTime(clamp(50 + amount, 50, 140), now + 0.16);
+
+  const noiseGain = audio.ctx.createGain();
+  const thudGain = audio.ctx.createGain();
+  const intensity = clamp(0.05 + amount / 180, 0.05, 0.25);
+  noiseGain.gain.setValueAtTime(intensity, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+  thudGain.gain.setValueAtTime(intensity * 0.8, now);
+  thudGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+  noise.connect(band);
+  band.connect(noiseGain);
+  noiseGain.connect(audio.master);
+  thud.connect(thudGain);
+  thudGain.connect(audio.master);
+
+  noise.start(now);
+  noise.stop(now + 0.22);
+  thud.start(now);
+  thud.stop(now + 0.2);
+}
+
+function updateAudio() {
+  if (!audio.initialized || !audio.ctx || !audio.engineGain) return;
+  const now = audio.ctx.currentTime;
+  const p = state.player;
+  const active = audio.enabled && state.mode === "playing" && p;
+  const speed = p ? Math.abs(p.speed) : 0;
+  const throttleIntent = active && (isDown("arrowup", "w") || touchControls.throttle > 0) ? 1 : 0;
+  const brakeIntent = active && (isDown(" ", "space", "spacebar") || touchControls.brake) ? 1 : 0;
+  const gain = active
+    ? clamp(0.012 + speed * 0.003 + throttleIntent * 0.02 - brakeIntent * 0.008, 0.01, 0.13)
+    : 0;
+  const baseFreq = active ? 44 + speed * 5.4 + throttleIntent * 24 : 40;
+  audio.engineGain.gain.setTargetAtTime(gain, now, active ? 0.07 : 0.16);
+  audio.engineOscA.frequency.setTargetAtTime(baseFreq, now, 0.08);
+  audio.engineOscB.frequency.setTargetAtTime(baseFreq * 2.02, now, 0.08);
 }
 
 const meshes = {
@@ -219,6 +387,8 @@ const meshes = {
   carDoors: [],
   carLights: [],
   carWheels: [],
+  carShellExtras: [],
+  carDirectionMarkers: [],
   carExternalModel: null,
   carDamageGroup: null,
   cockpit: null,
@@ -274,7 +444,9 @@ function loadExternalVehicleModel(vehicle, car) {
       const model = gltf.scene;
       model.name = `external-${vehicle.id}`;
       model.position.set(0, vehicle.modelYOffset || 0, 0);
+      model.rotation.x = vehicle.modelRotationX || 0;
       model.rotation.y = vehicle.modelRotationY || 0;
+      model.rotation.z = vehicle.modelRotationZ || 0;
       model.scale.setScalar(vehicle.modelScale || 1);
       model.traverse((child) => {
         if (!child.isMesh) return;
@@ -282,6 +454,7 @@ function loadExternalVehicleModel(vehicle, car) {
         child.receiveShadow = true;
         if (child.material) {
           child.material = child.material.clone();
+          child.material.side = THREE.DoubleSide;
           child.material.roughness = Math.min(0.72, child.material.roughness ?? 0.6);
           child.material.metalness = Math.max(0.04, child.material.metalness ?? 0.02);
         }
@@ -325,6 +498,7 @@ function setProceduralShellVisible(visible) {
     ...meshes.carDoors,
     ...meshes.carLights,
     ...meshes.carWheels,
+    ...meshes.carShellExtras,
   ].forEach((part) => {
     if (part && !part.userData.detached) part.visible = visible;
   });
@@ -380,10 +554,13 @@ function buildCar() {
   meshes.carDoors = [];
   meshes.carLights = [];
   meshes.carWheels = [];
+  meshes.carShellExtras = [];
+  meshes.carDirectionMarkers = [];
   const vehicle = currentVehicle();
   const bodyMat = new THREE.MeshStandardMaterial({ color: vehicle.secondary, roughness: 0.52, metalness: 0.08 });
   const accentMat = new THREE.MeshStandardMaterial({ color: vehicle.color, roughness: 0.55, metalness: 0.06 });
   const car = new THREE.Group();
+  const shellExtras = [];
 
   const body = makeBox(vehicle.length * 0.92, vehicle.bodyHeight, vehicle.width, bodyMat.clone());
   body.position.y = vehicle.rideHeight + vehicle.bodyHeight * 0.5;
@@ -402,6 +579,7 @@ function buildCar() {
   windshield.position.set(vehicle.length * 0.04, vehicle.rideHeight + vehicle.bodyHeight + vehicle.cabinHeight * 0.42, 0);
   windshield.rotation.z = -0.35;
   car.add(windshield);
+  shellExtras.push(windshield);
 
   const cabin = makeBox(vehicle.length * 0.26, vehicle.cabinHeight, vehicle.width * 0.68, mats.glass.clone());
   cabin.position.set(vehicle.style === "pickup" ? -vehicle.length * 0.12 : -vehicle.length * 0.1, vehicle.rideHeight + vehicle.bodyHeight + vehicle.cabinHeight * 0.48, 0);
@@ -415,11 +593,13 @@ function buildCar() {
   rearDeck.position.set(-vehicle.length * 0.32, vehicle.rideHeight + vehicle.bodyHeight + 0.03, 0);
   rearDeck.rotation.z = 0.04;
   car.add(rearDeck);
+  shellExtras.push(rearDeck);
 
   const rearWindow = makeBox(0.12, vehicle.cabinHeight * 0.68, vehicle.width * 0.62, mats.glass.clone());
   rearWindow.position.set(cabin.position.x - vehicle.length * 0.16, vehicle.rideHeight + vehicle.bodyHeight + vehicle.cabinHeight * 0.42, 0);
   rearWindow.rotation.z = 0.34;
   car.add(rearWindow);
+  shellExtras.push(rearWindow);
 
   const bumper = makeBox(0.18, 0.26, vehicle.width * 1.05, mats.black.clone());
   bumper.position.set(vehicle.length * 0.5, vehicle.rideHeight + 0.22, 0);
@@ -440,6 +620,7 @@ function buildCar() {
     const mirror = makeBox(0.18, 0.1, 0.18, mats.black.clone());
     mirror.position.set(vehicle.length * 0.1, vehicle.rideHeight + vehicle.bodyHeight + 0.32, z * 1.05);
     car.add(mirror);
+    shellExtras.push(mirror);
   }
 
   const lights = [];
@@ -459,17 +640,20 @@ function buildCar() {
     const sideStripe = makeBox(vehicle.length * 0.62, 0.18, 0.04, new THREE.MeshBasicMaterial({ color: 0x111317 }));
     sideStripe.position.set(-0.18, vehicle.rideHeight + vehicle.bodyHeight * 0.88, vehicle.width * 0.54);
     car.add(sideStripe);
+    shellExtras.push(sideStripe);
     const lightbar = makeBox(0.72, 0.14, 0.38, new THREE.MeshBasicMaterial({ color: 0x2368ff }));
     lightbar.position.set(cabin.position.x, roof.position.y + 0.14, 0);
     const redHalf = makeBox(0.34, 0.15, 0.39, new THREE.MeshBasicMaterial({ color: 0xe84855 }));
     redHalf.position.set(cabin.position.x + 0.19, roof.position.y + 0.15, 0);
     car.add(lightbar, redHalf);
+    shellExtras.push(lightbar, redHalf);
   }
 
   if (vehicle.style === "sport") {
     const spoiler = makeBox(0.16, 0.08, vehicle.width * 0.78, mats.black.clone());
     spoiler.position.set(-vehicle.length * 0.49, roof.position.y - 0.46, 0);
     car.add(spoiler);
+    shellExtras.push(spoiler);
   }
 
   if (vehicle.style === "suv" || vehicle.style === "pickup") {
@@ -479,7 +663,15 @@ function buildCar() {
       return rail;
     });
     car.add(...rails);
+    shellExtras.push(...rails);
   }
+
+  const frontMarker = makeBox(0.16, 0.07, Math.max(0.36, vehicle.width * 0.34), new THREE.MeshBasicMaterial({ color: 0xfff1aa }));
+  frontMarker.position.set(vehicle.length * 0.56, vehicle.rideHeight + vehicle.bodyHeight * 0.98, 0);
+  car.add(frontMarker);
+  const rearMarker = makeBox(0.16, 0.07, Math.max(0.32, vehicle.width * 0.3), new THREE.MeshBasicMaterial({ color: 0xb91f2d }));
+  rearMarker.position.set(-vehicle.length * 0.58, vehicle.rideHeight + vehicle.bodyHeight * 0.98, 0);
+  car.add(rearMarker);
 
   const wheels = [];
   for (const x of [-vehicle.length * 0.31, vehicle.length * 0.3]) {
@@ -514,6 +706,8 @@ function buildCar() {
   meshes.carDoors = doors;
   meshes.carLights = lights;
   meshes.carWheels = wheels;
+  meshes.carShellExtras = shellExtras;
+  meshes.carDirectionMarkers = [frontMarker, rearMarker];
   meshes.carDamageGroup = damageGroup;
   meshes.carProfile = {
     vehicle,
@@ -540,7 +734,10 @@ function buildCar() {
     rearBumper,
     ...doors,
     ...lights,
+    frontMarker,
+    rearMarker,
     ...wheels,
+    ...shellExtras,
   ].forEach(rememberCarPart);
 }
 
@@ -666,6 +863,8 @@ function clearObstacles() {
 }
 
 function resetGame() {
+  ensureAudioActive();
+  playUiTone(560, 0.1, 0.045);
   buildCar();
   state.mode = "playing";
   state.viewMode = state.viewMode || "chase";
@@ -715,7 +914,9 @@ function resetCarVisuals() {
     meshes.carRearBumper,
     ...meshes.carDoors,
     ...meshes.carLights,
+    ...meshes.carDirectionMarkers,
     ...meshes.carWheels,
+    ...meshes.carShellExtras,
   ].forEach(resetCarPart);
   if (meshes.carExternalModel) setProceduralShellVisible(false);
 }
@@ -723,6 +924,7 @@ function resetCarVisuals() {
 function finishGame(reason) {
   if (state.mode === "gameover") return;
   state.mode = "gameover";
+  playUiTone(reason === "totaled" ? 220 : 420, reason === "totaled" ? 0.22 : 0.16, 0.05, "sawtooth");
   resultTitle.textContent = reason === "totaled" ? "车辆报废" : "测试结束";
   resultCopy.textContent = `评分 ${Math.round(state.score)}，最大撞击 ${Math.round(
     state.bestImpact,
@@ -845,6 +1047,7 @@ function applyCollisionDamage(amount, label) {
   state.cameraShake = Math.max(state.cameraShake, clamp(amount * 0.33, 0.8, 5.4));
   state.message = p.damage > 82 ? `${label} 重击，车辆严重损毁` : `${label} 撞击，新增破损`;
   state.messageTimer = 1.35;
+  playImpact(amount);
   addDamageMark(amount);
   triggerBreakage(before, p.damage, amount);
   updateCarDamageVisuals();
@@ -1146,6 +1349,7 @@ function updateCamera(dt) {
 }
 
 function update(dt) {
+  updateAudio();
   if (state.mode !== "playing") return;
   const simDt = state.slowMo > 0 ? dt * 0.5 : dt;
   state.timeLeft -= dt;
@@ -1193,7 +1397,8 @@ function drawHud() {
     <div class="hud-card right">
       <strong>连击 x${state.combo.toFixed(1)}</strong>
       <span>最大撞击 ${Math.round(state.bestImpact)} km/h</span>
-      <span>C 视角  R 重开  P 暂停  F 全屏</span>
+      <span>C 视角  R 重开  P 暂停  M 声音  F 全屏</span>
+      <span>声音 ${audio.enabled ? "开" : "关"}</span>
     </div>
     <div class="message ${state.messageTimer > 0 ? "" : "hidden"}">${state.message}</div>
   `;
@@ -1297,14 +1502,20 @@ function render() {
 }
 
 function togglePause() {
-  if (state.mode === "playing") state.mode = "paused";
-  else if (state.mode === "paused") state.mode = "playing";
+  if (state.mode === "playing") {
+    state.mode = "paused";
+    playUiTone(330, 0.08, 0.038);
+  } else if (state.mode === "paused") {
+    state.mode = "playing";
+    playUiTone(520, 0.08, 0.038);
+  }
 }
 
 function toggleView() {
   state.viewMode = state.viewMode === "cockpit" ? "chase" : "cockpit";
   state.message = state.viewMode === "cockpit" ? "已切换到车内视角" : "已切换到追车视角";
   state.messageTimer = 1.1;
+  playUiTone(state.viewMode === "cockpit" ? 700 : 610, 0.07, 0.028, "sine");
 }
 
 function toggleFullscreen() {
@@ -1330,12 +1541,14 @@ function keyName(event) {
 }
 
 window.addEventListener("keydown", (event) => {
+  ensureAudioActive();
   const name = keyName(event);
   keys.add(name);
   if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(name)) event.preventDefault();
   if ((name === "enter" || name === " ") && state.mode === "menu") resetGame();
   if (name === "r") resetGame();
   if (name === "p") togglePause();
+  if (name === "m") toggleAudio();
   if (name === "c" || name === "v") toggleView();
   if (name === "f") toggleFullscreen();
 });
@@ -1345,6 +1558,7 @@ window.addEventListener("keyup", (event) => {
 });
 
 canvas.addEventListener("pointerdown", () => {
+  ensureAudioActive();
   if (state.mode === "menu") resetGame();
 });
 
@@ -1379,6 +1593,7 @@ function renderGameToText() {
     damageHits: state.damageHits,
     wreckLevel: state.wreckLevel,
     looseParts: state.looseParts.length,
+    audioEnabled: audio.enabled,
     player: p
       ? {
           x: Number(p.x.toFixed(2)),

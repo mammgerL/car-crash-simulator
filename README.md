@@ -18,6 +18,7 @@ python3 -m http.server 5173
 - `C` 或 `V`：切换追车视角 / 车内视角
 - `P`：暂停
 - `R`：重新开始
+- `M`：声音开关（静音/取消静音）
 - `F`：全屏
 - 平板/触屏：左下方向盘控制转向，右下油门和刹车，右上有视角、暂停、重开按钮
 
@@ -32,13 +33,8 @@ python3 -m http.server 5173
 
 ## 车辆模型
 
-当前版本引入了外部 `.glb` 车辆模型，并保留程序化碰撞/损坏部件作为车模加载失败时的兜底。
+当前版本使用更写实的外部 `.glb` 车型，并保留程序化碰撞/损坏部件作为车模加载失败时的兜底。
 
-- 来源：https://www.kenney.nl/assets/car-kit
-- 作者：Kenney
-- 授权：Creative Commons Zero, CC0
-- 本地许可证文件：`assets/models/kenney-car-kit/License.txt`
-- 警车来源：https://poly.pizza/m/Uj7i2vlmir
-- 警车作者：Kay Lousberg
-- 警车授权：Creative Commons Zero v1.0 Universal, CC0 1.0
-- 警车本地许可证文件：`assets/models/polypizza-kay-lousberg-police-car.LICENSE.txt`
+- 当前启用车型来源：Poly Pizza（CC-BY 3.0）
+- 本地授权与来源映射：`assets/models/poly-pizza-realistic/ATTRIBUTION.txt`
+- 历史模型文件仍保留在仓库中（Kenney/旧警车），便于回退与对比
