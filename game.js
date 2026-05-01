@@ -106,7 +106,7 @@ const VEHICLES = {
     model: "assets/models/poly-pizza-realistic/supercar.glb",
     modelScale: 0.01,
     modelYOffset: 0,
-    modelRotationY: 0,
+    modelRotationY: Math.PI / 2,
   },
   suv: {
     id: "suv",
@@ -129,7 +129,7 @@ const VEHICLES = {
     model: "assets/models/poly-pizza-realistic/range-rover.glb",
     modelScale: 1,
     modelYOffset: 1.33,
-    modelRotationY: 0,
+    modelRotationY: Math.PI / 2,
   },
   pickup: {
     id: "pickup",
@@ -175,7 +175,7 @@ const VEHICLES = {
     model: "assets/models/poly-pizza-realistic/dodge-charger.glb",
     modelScale: 1,
     modelYOffset: 0.37,
-    modelRotationY: 0,
+    modelRotationY: Math.PI / 2,
   },
 };
 
