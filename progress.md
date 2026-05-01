@@ -46,6 +46,10 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 - Validation: `node --check game.js` passed, ran the develop-web-game Playwright client for all four vehicles, visually inspected screenshots, and no `errors-*.json` files were generated.
 - External-view steering fix: user reported chase/external view left-right steering was visually reversed while cockpit view was correct. Changed the visible car group rotation from `-p.angle` to `p.angle`; cockpit camera and physics still use `forwardVector(p.angle)`.
 - Validation: `node --check game.js` passed, ran develop-web-game Playwright right-turn and left-turn checks in chase view, inspected screenshots, and no `errors-*.json` files were generated.
+- City update: replaced the crash-test arena visuals with a city avenue layout, including wider world bounds, asphalt city roads, cross streets, sidewalks, curbs, crosswalks, road markings, building blocks, and window details.
+- Added many other vehicles as collision obstacles, including lane-parked and cross-parked cars, while keeping a few barrels/tires/barriers for variety. `render_game_to_text` now exposes more visible obstacles for testing.
+- Reduced total-loss rate by increasing per-vehicle durability and lowering collision-to-damage scaling. Validation run had 4 impacts with about 22% player damage, instead of approaching total loss.
+- Validation: `node --check game.js` passed, ran develop-web-game Playwright driving check in chase view, inspected `output/city-update/shot-0.png` and `shot-1.png`, and no `errors-*.json` files were generated.
 
 ## TODO
 

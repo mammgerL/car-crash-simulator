@@ -11,10 +11,10 @@ const resultCopy = document.getElementById("result-copy");
 const vehicleButtons = [...document.querySelectorAll(".vehicle-option")];
 
 const WORLD = {
-  minX: -30,
-  maxX: 42,
-  minZ: -19,
-  maxZ: 19,
+  minX: -46,
+  maxX: 64,
+  minZ: -28,
+  maxZ: 28,
 };
 
 const keys = new Set();
@@ -63,6 +63,10 @@ scene.add(sun);
 const mats = {
   asphalt: new THREE.MeshStandardMaterial({ color: 0x33383a, roughness: 0.9 }),
   grass: new THREE.MeshStandardMaterial({ color: 0x2f6b4f, roughness: 0.95 }),
+  concrete: new THREE.MeshStandardMaterial({ color: 0x8b9396, roughness: 0.86 }),
+  sidewalk: new THREE.MeshStandardMaterial({ color: 0xb5b8b2, roughness: 0.82 }),
+  building: new THREE.MeshStandardMaterial({ color: 0x5b6468, roughness: 0.78 }),
+  window: new THREE.MeshBasicMaterial({ color: 0xd6efff, transparent: true, opacity: 0.72 }),
   line: new THREE.MeshBasicMaterial({ color: 0xf2c14e }),
   white: new THREE.MeshStandardMaterial({ color: 0xf4efe6, roughness: 0.55, metalness: 0.08 }),
   red: new THREE.MeshStandardMaterial({ color: 0xe84855, roughness: 0.55, metalness: 0.04 }),
@@ -96,7 +100,7 @@ const VEHICLES = {
     cabinHeight: 0.62,
     rideHeight: 0.4,
     mass: 1,
-    durability: 1,
+    durability: 1.45,
     acceleration: 22,
     maxSpeed: 31,
     reverseSpeed: 9,
@@ -119,7 +123,7 @@ const VEHICLES = {
     cabinHeight: 0.78,
     rideHeight: 0.5,
     mass: 1.32,
-    durability: 1.28,
+    durability: 1.8,
     acceleration: 17,
     maxSpeed: 25,
     reverseSpeed: 7,
@@ -142,7 +146,7 @@ const VEHICLES = {
     cabinHeight: 0.68,
     rideHeight: 0.52,
     mass: 1.55,
-    durability: 1.5,
+    durability: 2.05,
     acceleration: 15,
     maxSpeed: 23,
     reverseSpeed: 7,
@@ -165,7 +169,7 @@ const VEHICLES = {
     cabinHeight: 0.66,
     rideHeight: 0.42,
     mass: 1.12,
-    durability: 1.12,
+    durability: 1.65,
     acceleration: 20,
     maxSpeed: 29,
     reverseSpeed: 8,
@@ -504,46 +508,103 @@ function setProceduralShellVisible(visible) {
   });
 }
 
+function addBuilding(x, z, w, h, d, color) {
+  const mat = mats.building.clone();
+  mat.color.set(color);
+  const building = makeBox(w, h, d, mat);
+  building.position.set(x, h * 0.5, z);
+  scene.add(building);
+
+  const rows = Math.max(2, Math.floor(h / 1.25));
+  const cols = Math.max(2, Math.floor(w / 1.8));
+  for (let side = -1; side <= 1; side += 2) {
+    for (let row = 1; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        if ((row + col) % 3 === 0) continue;
+        const win = makeBox(0.5, 0.36, 0.035, mats.window.clone());
+        win.position.set(x - w * 0.38 + col * (w * 0.76 / Math.max(1, cols - 1)), row * 1.05, z + side * (d * 0.5 + 0.022));
+        scene.add(win);
+      }
+    }
+  }
+}
+
+function addCrosswalk(x) {
+  for (let z = -9; z <= 9; z += 1.25) {
+    const stripe = makeBox(3.2, 0.022, 0.42, mats.white.clone());
+    stripe.position.set(x, 0.035, z);
+    scene.add(stripe);
+  }
+}
+
 function buildWorld() {
-  const grass = new THREE.Mesh(new THREE.PlaneGeometry(120, 80), mats.grass);
-  grass.rotation.x = -Math.PI / 2;
-  grass.position.y = -0.04;
-  grass.receiveShadow = true;
-  scene.add(grass);
+  const cityBase = new THREE.Mesh(new THREE.PlaneGeometry(150, 92), mats.concrete);
+  cityBase.rotation.x = -Math.PI / 2;
+  cityBase.position.y = -0.055;
+  cityBase.receiveShadow = true;
+  scene.add(cityBase);
 
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(82, 40), mats.asphalt);
-  road.rotation.x = -Math.PI / 2;
-  road.receiveShadow = true;
-  scene.add(road);
+  const mainRoad = new THREE.Mesh(new THREE.PlaneGeometry(118, 24), mats.asphalt);
+  mainRoad.rotation.x = -Math.PI / 2;
+  mainRoad.position.set(9, 0, 0);
+  mainRoad.receiveShadow = true;
+  scene.add(mainRoad);
 
-  for (let x = WORLD.minX + 3; x < WORLD.maxX; x += 6) {
-    const dash = makeBox(2.4, 0.025, 0.14, mats.line);
-    dash.position.set(x, 0.018, -0.15);
-    dash.receiveShadow = false;
-    scene.add(dash);
+  for (const x of [-30, 6, 42]) {
+    const crossRoad = new THREE.Mesh(new THREE.PlaneGeometry(11, 62), mats.asphalt);
+    crossRoad.rotation.x = -Math.PI / 2;
+    crossRoad.position.set(x, 0.002, 0);
+    crossRoad.receiveShadow = true;
+    scene.add(crossRoad);
+    addCrosswalk(x - 6);
+    addCrosswalk(x + 6);
   }
 
-  const railMat = new THREE.MeshStandardMaterial({ color: 0x25353b, roughness: 0.65 });
-  const topRail = makeBox(76, 0.62, 0.5, railMat);
-  topRail.position.set(6, 0.32, WORLD.minZ - 0.25);
-  scene.add(topRail);
-  const bottomRail = topRail.clone();
-  bottomRail.position.z = WORLD.maxZ + 0.25;
-  scene.add(bottomRail);
-  const leftRail = makeBox(0.5, 0.62, 39, railMat);
-  leftRail.position.set(WORLD.minX - 0.25, 0.32, 0);
-  scene.add(leftRail);
-  const rightRail = leftRail.clone();
-  rightRail.position.x = WORLD.maxX + 0.25;
-  scene.add(rightRail);
+  for (const z of [-14.2, 14.2]) {
+    const sidewalk = makeBox(118, 0.14, 3.6, mats.sidewalk.clone());
+    sidewalk.position.set(9, 0.07, z);
+    scene.add(sidewalk);
+  }
 
-  for (let i = 0; i < 24; i += 1) {
-    const scuff = makeBox(rand(1.8, 4.6), 0.018, 0.05, mats.black);
-    scuff.position.set(rand(WORLD.minX + 4, WORLD.maxX - 4), 0.03, rand(WORLD.minZ + 2, WORLD.maxZ - 2));
-    scuff.rotation.y = rand(-0.4, 0.4);
+  for (let x = WORLD.minX + 4; x < WORLD.maxX; x += 8) {
+    const dash = makeBox(3.2, 0.024, 0.14, mats.line);
+    dash.position.set(x, 0.03, -0.08);
+    dash.receiveShadow = false;
+    scene.add(dash);
+    const sideLineA = makeBox(2.8, 0.022, 0.1, mats.white.clone());
+    sideLineA.position.set(x + 1.2, 0.031, -6.2);
+    const sideLineB = sideLineA.clone();
+    sideLineB.position.z = 6.2;
+    scene.add(sideLineA, sideLineB);
+  }
+
+  const curbMat = new THREE.MeshStandardMaterial({ color: 0x6c7478, roughness: 0.7 });
+  for (const z of [WORLD.minZ + 0.25, WORLD.maxZ - 0.25, -12.2, 12.2]) {
+    const curb = makeBox(111, 0.36, 0.32, curbMat);
+    curb.position.set(9, 0.18, z);
+    scene.add(curb);
+  }
+  for (const x of [WORLD.minX + 0.25, WORLD.maxX - 0.25]) {
+    const curb = makeBox(0.36, 0.4, 56, curbMat);
+    curb.position.set(x, 0.2, 0);
+    scene.add(curb);
+  }
+
+  const buildingColors = [0x59656b, 0x766f68, 0x4d5a61, 0x847d70, 0x66717a];
+  for (let i = 0; i < 18; i += 1) {
+    const x = WORLD.minX + 8 + i * 6.4;
+    const upper = i % 2 === 0;
+    const z = upper ? rand(-26, -20) : rand(20, 26);
+    addBuilding(x, z, rand(3.4, 5.8), rand(4.8, 11.5), rand(3.2, 5.8), buildingColors[i % buildingColors.length]);
+  }
+
+  for (let i = 0; i < 36; i += 1) {
+    const scuff = makeBox(rand(1.8, 5.2), 0.018, 0.05, mats.black);
+    scuff.position.set(rand(WORLD.minX + 5, WORLD.maxX - 5), 0.034, rand(-10, 10));
+    scuff.rotation.y = rand(-0.55, 0.55);
     scuff.material = mats.black.clone();
     scuff.material.transparent = true;
-    scuff.material.opacity = 0.12;
+    scuff.material.opacity = 0.1;
     scene.add(scuff);
   }
 }
@@ -822,11 +883,26 @@ function makeObstacle(x, z, radius, type, hp, mass, material, shape) {
     }
   } else if (shape === "car") {
     mesh = new THREE.Group();
-    const body = makeBox(radius * 1.9, 0.75, radius * 1.1, material);
-    body.position.y = 0.72;
-    const cabin = makeBox(radius * 0.7, 0.55, radius * 0.78, mats.glass.clone());
-    cabin.position.set(-radius * 0.2, 1.18, 0);
-    mesh.add(body, cabin);
+    const body = makeBox(radius * 2.15, 0.62, radius * 1.08, material);
+    body.position.y = 0.58;
+    const hood = makeBox(radius * 0.7, 0.18, radius * 0.92, material.clone ? material.clone() : material);
+    hood.position.set(radius * 0.42, 1.0, 0);
+    const cabin = makeBox(radius * 0.78, 0.52, radius * 0.76, mats.glass.clone());
+    cabin.position.set(-radius * 0.22, 1.04, 0);
+    const frontLights = makeBox(0.08, 0.1, radius * 0.62, new THREE.MeshBasicMaterial({ color: 0xfff1aa }));
+    frontLights.position.set(radius * 1.12, 0.66, 0);
+    const tailLights = makeBox(0.08, 0.12, radius * 0.58, new THREE.MeshBasicMaterial({ color: 0xb91f2d }));
+    tailLights.position.set(-radius * 1.12, 0.66, 0);
+    mesh.add(body, hood, cabin, frontLights, tailLights);
+    for (const wx of [-radius * 0.72, radius * 0.72]) {
+      for (const wz of [-radius * 0.58, radius * 0.58]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.22, radius * 0.22, 0.18, 18), mats.tire);
+        wheel.position.set(wx, 0.34, wz);
+        wheel.rotation.x = Math.PI / 2;
+        wheel.castShadow = true;
+        mesh.add(wheel);
+      }
+    }
   } else {
     mesh = makeBox(radius * 1.7, radius * 0.95, radius * 1.25, material);
     mesh.position.y = radius * 0.48;
@@ -840,20 +916,34 @@ function makeObstacle(x, z, radius, type, hp, mass, material, shape) {
   return obstacle;
 }
 
+function makeTrafficCar(x, z, yaw, color, type = "其它汽车") {
+  const car = makeObstacle(x, z, 1.65, type, 72, 2.35, new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.08 }), "car");
+  car.yaw = yaw;
+  car.mesh.rotation.y = yaw;
+  return car;
+}
+
 function createObstacles() {
   clearObstacles();
   return [
-    makeObstacle(-12, 0, 1.6, "沙桶", 36, 1.7, mats.yellow.clone(), "barrel"),
-    makeObstacle(-10.5, -8.2, 1.15, "油桶", 26, 1.2, mats.red.clone(), "barrel"),
-    makeObstacle(-4.5, -10.4, 1.15, "油桶", 26, 1.2, mats.red.clone(), "barrel"),
-    makeObstacle(2.8, -8.5, 1.15, "油桶", 26, 1.2, mats.red.clone(), "barrel"),
-    makeObstacle(-8.5, 9.5, 1.28, "轮胎堆", 32, 1.6, mats.tire, "tire"),
-    makeObstacle(-1.5, 8.4, 1.28, "轮胎堆", 32, 1.6, mats.tire, "tire"),
-    makeObstacle(5.5, 10.3, 1.28, "轮胎堆", 32, 1.6, mats.tire, "tire"),
-    makeObstacle(13.5, -2.8, 1.75, "测试车", 58, 2.7, mats.cyan.clone(), "car"),
-    makeObstacle(25.5, 4.2, 2.2, "混凝土块", 84, 3.8, mats.metal.clone(), "block"),
-    makeObstacle(28.8, -10.7, 1.55, "路障", 44, 2.1, mats.yellow.clone(), "block"),
-    makeObstacle(34, 10.8, 1.55, "路障", 44, 2.1, mats.yellow.clone(), "block"),
+    makeTrafficCar(-35, -7.4, 0.04, 0x2d6a8e),
+    makeTrafficCar(-31, 6.8, Math.PI + 0.05, 0x9d2f3f),
+    makeTrafficCar(-20, -6.2, 0.08, 0xf4efe6),
+    makeTrafficCar(-13, 6.9, Math.PI - 0.08, 0x2f6b4f),
+    makeTrafficCar(-5, -3.6, Math.PI / 2, 0xd6a33a, "横停车辆"),
+    makeTrafficCar(2, 7.1, Math.PI + 0.08, 0x5d6a74),
+    makeTrafficCar(8, -7.2, -0.05, 0x8f3e2f),
+    makeTrafficCar(16, 3.4, -Math.PI / 2, 0x31a9b8, "横停车辆"),
+    makeTrafficCar(21, -7.6, 0.03, 0xf2c14e),
+    makeTrafficCar(28, 6.4, Math.PI - 0.04, 0x465c7a),
+    makeTrafficCar(35, -3.8, Math.PI / 2, 0x923a63, "横停车辆"),
+    makeTrafficCar(41, 7.2, Math.PI + 0.02, 0xb7b0a3),
+    makeTrafficCar(49, -7.1, -0.02, 0x3e7a56),
+    makeTrafficCar(55, 5.6, Math.PI - 0.08, 0x22272a),
+    makeObstacle(-12, 0.4, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"),
+    makeObstacle(4.5, -10.2, 1.08, "油桶", 24, 1.1, mats.red.clone(), "barrel"),
+    makeObstacle(24.5, 10.5, 1.22, "轮胎堆", 30, 1.4, mats.tire, "tire"),
+    makeObstacle(58.5, -10.8, 1.45, "路障", 40, 1.8, mats.yellow.clone(), "block"),
   ];
 }
 
@@ -875,7 +965,7 @@ function resetGame() {
   state.comboTimer = 0;
   state.cameraShake = 0;
   state.slowMo = 0;
-  state.message = "3D 测试场启动";
+  state.message = "城市道路已开放";
   state.messageTimer = 2.2;
   state.player = makePlayer();
   state.particles = [];
@@ -1021,7 +1111,7 @@ function collidePlayerWithObstacles() {
     o.hp -= impactDamage;
     o.hitTimer = 0.28;
 
-    applyCollisionDamage(impactDamage * 1.6, o.type);
+    applyCollisionDamage(impactDamage * 1.15, o.type);
     state.combo = clamp(state.combo + 0.2, 1, 5);
     state.comboTimer = 2.3;
     state.bestImpact = Math.max(state.bestImpact, impact);
@@ -1042,7 +1132,7 @@ function applyCollisionDamage(amount, label) {
   const p = state.player;
   const vehicle = currentVehicle();
   const before = p.damage;
-  p.damage = clamp(p.damage + (amount * 0.34) / vehicle.durability, 0, 100);
+  p.damage = clamp(p.damage + (amount * 0.18) / vehicle.durability, 0, 100);
   state.damageHits += 1;
   state.cameraShake = Math.max(state.cameraShake, clamp(amount * 0.33, 0.8, 5.4));
   state.message = p.damage > 82 ? `${label} 重击，车辆严重损毁` : `${label} 撞击，新增破损`;
@@ -1583,7 +1673,7 @@ function resizeRendererToDisplaySize() {
 function renderGameToText() {
   const p = state.player;
   return JSON.stringify({
-    coordinateSystem: "3D world, x right along track, y up, z lateral, units are meters",
+    coordinateSystem: "3D city world, x follows the main avenue, y up, z crosses lanes, units are meters",
     mode: state.mode,
     viewMode: state.viewMode,
     timeLeft: Number(state.timeLeft.toFixed(1)),
@@ -1605,7 +1695,7 @@ function renderGameToText() {
       : null,
     obstacles: state.obstacles
       .filter((o) => o.hp > 0)
-      .slice(0, 10)
+      .slice(0, 16)
       .map((o) => ({
         type: o.type,
         x: Number(o.x.toFixed(1)),
