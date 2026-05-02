@@ -11,10 +11,10 @@ const resultCopy = document.getElementById("result-copy");
 const vehicleButtons = [...document.querySelectorAll(".vehicle-option")];
 
 const WORLD = {
-  minX: -46,
-  maxX: 64,
-  minZ: -28,
-  maxZ: 28,
+  minX: -120,
+  maxX: 200,
+  minZ: -65,
+  maxZ: 65,
 };
 
 const keys = new Set();
@@ -43,7 +43,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fc1d5);
-scene.fog = new THREE.Fog(0x9fc1d5, 48, 105);
+scene.fog = new THREE.Fog(0x9fc1d5, 60, 200);
 
 const camera = new THREE.PerspectiveCamera(62, canvas.width / canvas.height, 0.08, 150);
 scene.add(camera);
@@ -55,10 +55,10 @@ const sun = new THREE.DirectionalLight(0xffffff, 2.1);
 sun.position.set(-18, 28, 14);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -45;
-sun.shadow.camera.right = 45;
-sun.shadow.camera.top = 35;
-sun.shadow.camera.bottom = -35;
+sun.shadow.camera.left = -100;
+sun.shadow.camera.right = 100;
+sun.shadow.camera.top = 80;
+sun.shadow.camera.bottom = -80;
 scene.add(sun);
 
 const mats = {
@@ -532,7 +532,7 @@ function addBuilding(x, z, w, h, d, color) {
 }
 
 function addCrosswalk(x) {
-  for (let z = -9; z <= 9; z += 1.25) {
+  for (let z = -13; z <= 13; z += 1.25) {
     const stripe = makeBox(3.2, 0.022, 0.42, mats.white.clone());
     stripe.position.set(x, 0.035, z);
     scene.add(stripe);
@@ -540,20 +540,24 @@ function addCrosswalk(x) {
 }
 
 function buildWorld() {
-  const cityBase = new THREE.Mesh(new THREE.PlaneGeometry(150, 92), mats.concrete);
+  const worldCenterX = (WORLD.minX + WORLD.maxX) / 2;
+  const worldW = WORLD.maxX - WORLD.minX;
+  const worldD = WORLD.maxZ - WORLD.minZ;
+
+  const cityBase = new THREE.Mesh(new THREE.PlaneGeometry(worldW + 60, worldD + 60), mats.concrete);
   cityBase.rotation.x = -Math.PI / 2;
-  cityBase.position.y = -0.055;
+  cityBase.position.set(worldCenterX, -0.055, 0);
   cityBase.receiveShadow = true;
   scene.add(cityBase);
 
-  const mainRoad = new THREE.Mesh(new THREE.PlaneGeometry(118, 24), mats.asphalt);
+  const mainRoad = new THREE.Mesh(new THREE.PlaneGeometry(worldW, 30), mats.asphalt);
   mainRoad.rotation.x = -Math.PI / 2;
-  mainRoad.position.set(9, 0, 0);
+  mainRoad.position.set(worldCenterX, 0, 0);
   mainRoad.receiveShadow = true;
   scene.add(mainRoad);
 
-  for (const x of [-30, 6, 42]) {
-    const crossRoad = new THREE.Mesh(new THREE.PlaneGeometry(11, 62), mats.asphalt);
+  for (const x of [-90, -60, -30, 0, 30, 60, 90, 120, 150, 180]) {
+    const crossRoad = new THREE.Mesh(new THREE.PlaneGeometry(11, worldD + 10), mats.asphalt);
     crossRoad.rotation.x = -Math.PI / 2;
     crossRoad.position.set(x, 0.002, 0);
     crossRoad.receiveShadow = true;
@@ -562,9 +566,9 @@ function buildWorld() {
     addCrosswalk(x + 6);
   }
 
-  for (const z of [-14.2, 14.2]) {
-    const sidewalk = makeBox(118, 0.14, 3.6, mats.sidewalk.clone());
-    sidewalk.position.set(9, 0.07, z);
+  for (const z of [-17.2, 17.2]) {
+    const sidewalk = makeBox(worldW, 0.14, 4.0, mats.sidewalk.clone());
+    sidewalk.position.set(worldCenterX, 0.07, z);
     scene.add(sidewalk);
   }
 
@@ -574,35 +578,35 @@ function buildWorld() {
     dash.receiveShadow = false;
     scene.add(dash);
     const sideLineA = makeBox(2.8, 0.022, 0.1, mats.white.clone());
-    sideLineA.position.set(x + 1.2, 0.031, -6.2);
+    sideLineA.position.set(x + 1.2, 0.031, -7.5);
     const sideLineB = sideLineA.clone();
-    sideLineB.position.z = 6.2;
+    sideLineB.position.z = 7.5;
     scene.add(sideLineA, sideLineB);
   }
 
   const curbMat = new THREE.MeshStandardMaterial({ color: 0x6c7478, roughness: 0.7 });
-  for (const z of [WORLD.minZ + 0.25, WORLD.maxZ - 0.25, -12.2, 12.2]) {
-    const curb = makeBox(111, 0.36, 0.32, curbMat);
-    curb.position.set(9, 0.18, z);
+  for (const z of [WORLD.minZ + 0.25, WORLD.maxZ - 0.25, -15.2, 15.2]) {
+    const curb = makeBox(worldW, 0.36, 0.32, curbMat);
+    curb.position.set(worldCenterX, 0.18, z);
     scene.add(curb);
   }
   for (const x of [WORLD.minX + 0.25, WORLD.maxX - 0.25]) {
-    const curb = makeBox(0.36, 0.4, 56, curbMat);
+    const curb = makeBox(0.36, 0.4, worldD + 2, curbMat);
     curb.position.set(x, 0.2, 0);
     scene.add(curb);
   }
 
   const buildingColors = [0x59656b, 0x766f68, 0x4d5a61, 0x847d70, 0x66717a];
-  for (let i = 0; i < 18; i += 1) {
-    const x = WORLD.minX + 8 + i * 6.4;
+  for (let i = 0; i < 50; i += 1) {
+    const x = WORLD.minX + 10 + i * 6.5;
     const upper = i % 2 === 0;
-    const z = upper ? rand(-26, -20) : rand(20, 26);
-    addBuilding(x, z, rand(3.4, 5.8), rand(4.8, 11.5), rand(3.2, 5.8), buildingColors[i % buildingColors.length]);
+    const z = upper ? rand(-58, -22) : rand(22, 58);
+    addBuilding(x, z, rand(3.4, 5.8), rand(4.8, 13.5), rand(3.2, 6.2), buildingColors[i % buildingColors.length]);
   }
 
-  for (let i = 0; i < 36; i += 1) {
+  for (let i = 0; i < 60; i += 1) {
     const scuff = makeBox(rand(1.8, 5.2), 0.018, 0.05, mats.black);
-    scuff.position.set(rand(WORLD.minX + 5, WORLD.maxX - 5), 0.034, rand(-10, 10));
+    scuff.position.set(rand(WORLD.minX + 5, WORLD.maxX - 5), 0.034, rand(-12, 12));
     scuff.rotation.y = rand(-0.55, 0.55);
     scuff.material = mats.black.clone();
     scuff.material.transparent = true;
@@ -840,7 +844,7 @@ function buildCockpit() {
 function makePlayer() {
   const vehicle = currentVehicle();
   return {
-    x: -24,
+    x: -80,
     z: 0,
     vx: 0,
     vz: 0,
@@ -928,24 +932,55 @@ function makeTrafficCar(x, z, yaw, color, type = "其它汽车") {
 function createObstacles() {
   clearObstacles();
   return [
-    makeTrafficCar(-35, -7.4, 0.04, 0x2d6a8e),
-    makeTrafficCar(-31, 6.8, Math.PI + 0.05, 0x9d2f3f),
-    makeTrafficCar(-20, -6.2, 0.08, 0xf4efe6),
-    makeTrafficCar(-13, 6.9, Math.PI - 0.08, 0x2f6b4f),
-    makeTrafficCar(-5, -3.6, Math.PI / 2, 0xd6a33a, "横停车辆"),
-    makeTrafficCar(2, 7.1, Math.PI + 0.08, 0x5d6a74),
-    makeTrafficCar(8, -7.2, -0.05, 0x8f3e2f),
-    makeTrafficCar(16, 3.4, -Math.PI / 2, 0x31a9b8, "横停车辆"),
-    makeTrafficCar(21, -7.6, 0.03, 0xf2c14e),
-    makeTrafficCar(28, 6.4, Math.PI - 0.04, 0x465c7a),
-    makeTrafficCar(35, -3.8, Math.PI / 2, 0x923a63, "横停车辆"),
-    makeTrafficCar(41, 7.2, Math.PI + 0.02, 0xb7b0a3),
-    makeTrafficCar(49, -7.1, -0.02, 0x3e7a56),
-    makeTrafficCar(55, 5.6, Math.PI - 0.08, 0x22272a),
-    makeObstacle(-12, 0.4, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"),
-    makeObstacle(4.5, -10.2, 1.08, "油桶", 24, 1.1, mats.red.clone(), "barrel"),
-    makeObstacle(24.5, 10.5, 1.22, "轮胎堆", 30, 1.4, mats.tire, "tire"),
-    makeObstacle(58.5, -10.8, 1.45, "路障", 40, 1.8, mats.yellow.clone(), "block"),
+    // West zone x=-110 to -50
+    makeTrafficCar(-110, -7.4, 0.04, 0x2d6a8e),
+    makeTrafficCar(-103, 7.1, Math.PI + 0.06, 0x9d2f3f),
+    makeTrafficCar(-95, -6.2, 0.08, 0xf4efe6),
+    makeTrafficCar(-88, 7.4, Math.PI - 0.05, 0x2f6b4f),
+    makeTrafficCar(-80, -3.8, Math.PI / 2, 0xd6a33a, "横停车辆"),
+    makeTrafficCar(-72, 6.8, Math.PI + 0.04, 0x5d6a74),
+    makeTrafficCar(-64, -7.5, -0.06, 0x8f3e2f),
+    makeTrafficCar(-56, 3.6, -Math.PI / 2, 0x31a9b8, "横停车辆"),
+    // Mid-west zone x=-45 to 0
+    makeTrafficCar(-48, -7.2, 0.03, 0xf2c14e),
+    makeTrafficCar(-40, 6.5, Math.PI - 0.04, 0x465c7a),
+    makeTrafficCar(-32, -4.1, Math.PI / 2, 0x923a63, "横停车辆"),
+    makeTrafficCar(-24, 7.3, Math.PI + 0.02, 0xb7b0a3),
+    makeTrafficCar(-16, -7.1, -0.03, 0x3e7a56),
+    makeTrafficCar(-8, 5.8, Math.PI - 0.07, 0x22272a),
+    // Central zone x=5 to 60
+    makeTrafficCar(5, -5.5, 0.05, 0x4a7fc1),
+    makeTrafficCar(12, 7.0, Math.PI + 0.06, 0xe84855),
+    makeTrafficCar(20, -7.4, -0.04, 0x7a5c3e),
+    makeTrafficCar(28, 3.8, -Math.PI / 2, 0x3a8f5e, "横停车辆"),
+    makeTrafficCar(36, 6.7, Math.PI + 0.03, 0x9e6b4a),
+    makeTrafficCar(44, -6.8, 0.07, 0x4d6892),
+    makeTrafficCar(52, 7.5, Math.PI - 0.05, 0xb34d2f),
+    // East zone x=65 to 130
+    makeTrafficCar(65, -5.2, 0.04, 0x2f7f6a),
+    makeTrafficCar(74, 7.0, Math.PI + 0.05, 0x7a9e3e),
+    makeTrafficCar(83, -7.6, -0.03, 0x5e3a92),
+    makeTrafficCar(92, 4.2, Math.PI / 2, 0xc8a83a, "横停车辆"),
+    makeTrafficCar(100, 6.4, Math.PI - 0.06, 0x3e7a9e),
+    makeTrafficCar(108, -7.0, 0.04, 0x8f4a3a),
+    makeTrafficCar(116, 7.2, Math.PI + 0.02, 0x4a6e8f),
+    makeTrafficCar(124, -6.3, -0.05, 0x6f4a7e),
+    // Far east zone x=135 to 190
+    makeTrafficCar(135, 5.5, Math.PI - 0.03, 0x2d8ea3),
+    makeTrafficCar(144, -7.3, 0.06, 0x9a4f68),
+    makeTrafficCar(153, 6.8, Math.PI + 0.04, 0x4a8c5e),
+    makeTrafficCar(162, -4.6, -Math.PI / 2, 0xd4823a, "横停车辆"),
+    makeTrafficCar(170, 7.4, Math.PI - 0.02, 0x5e6a9e),
+    makeTrafficCar(178, -6.9, 0.05, 0x8e4a2f),
+    makeTrafficCar(187, 5.3, Math.PI + 0.07, 0x3e8f7a),
+    // Scattered obstacles
+    makeObstacle(-95, 0.5, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"),
+    makeObstacle(-60, -10.5, 1.08, "油桶", 24, 1.1, mats.red.clone(), "barrel"),
+    makeObstacle(-10, 10.8, 1.22, "轮胎堆", 30, 1.4, mats.tire, "tire"),
+    makeObstacle(40, 0.3, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"),
+    makeObstacle(85, -11.2, 1.45, "路障", 40, 1.8, mats.yellow.clone(), "block"),
+    makeObstacle(130, 10.4, 1.22, "轮胎堆", 30, 1.4, mats.tire, "tire"),
+    makeObstacle(165, -10.8, 1.08, "油桶", 24, 1.1, mats.red.clone(), "barrel"),
   ];
 }
 
@@ -1411,7 +1446,7 @@ function updateLooseParts(dt) {
 function updateCarMesh() {
   const p = state.player;
   meshes.car.position.set(p.x, 0, p.z);
-  meshes.car.rotation.y = p.angle;
+  meshes.car.rotation.y = -p.angle;
   meshes.car.visible = state.viewMode !== "cockpit" || state.mode !== "playing";
 }
 

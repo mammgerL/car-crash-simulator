@@ -61,3 +61,8 @@ Original prompt: 做一个撞车模拟器的游戏，能够用github pages部署
 ## TODO
 
 - Optional next improvements: higher-detail licensed GLB models, more arenas, persistent best score.
+- Fixed car driving tail-first: root cause was `meshes.car.rotation.y = p.angle` which mismatches THREE.js Y-rotation (local +X → world `(cos θ, 0, −sin θ)`) with the physics direction `(cos angle, 0, sin angle)`. The previous switch from `-p.angle` to `+p.angle` (line 47 entry) was made before the heading-follow camera existed; with the current lagged-yaw chase camera that earlier fix is now the bug. Reverted to `meshes.car.rotation.y = -p.angle`. External models (modelRotationY = π/2 for sport/suv/police, π for pickup) are mathematically correct with this sign — no modelRotationY changes needed.
+- Expanded world from 110m×56m to 320m×130m: WORLD minX=-120/maxX=200/minZ=-65/maxZ=65. Updated cityBase, mainRoad, 10 cross streets, sidewalks, curbs, 50 buildings. Fog extended to 200m. Shadow camera expanded to ±100/±80.
+- Increased obstacles from 18 to 43 (36 traffic cars + 7 barrels/blocks/tires), spanning the full new x range -110 to 190.
+- Player start x changed from -24 to -80 (more room to build speed before hitting traffic).
+- Validated: no console errors, car drives front-first, right arrow turns right, left arrow turns left, city extends far into distance.
