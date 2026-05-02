@@ -26,6 +26,7 @@ const CITY = {
 const keys = new Set();
 const tmp = new THREE.Vector3();
 const gltfLoader = new GLTFLoader();
+const trafficModelCache = new Map();
 const touchControls = {
   steer: 0,
   throttle: 0,
@@ -1011,10 +1012,40 @@ function makeObstacle(x, z, radius, type, hp, mass, material, shape) {
 }
 
 function makeTrafficCar(x, z, yaw, color, type = "其它汽车") {
-  const car = makeObstacle(x, z, 1.65, type, 72, 2.35, new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.08 }), "car");
+  const car = makeObstacle(x, z, 1.65, type, 110, 2.35, new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.08 }), "car");
   car.yaw = yaw;
   car.mesh.rotation.y = yaw;
+  car.aiAngle = yaw;
+  car.aiSpeed = rand(7, 13);
+  applyTrafficModel(car);
   return car;
+}
+
+function applyTrafficModel(obs) {
+  if (trafficModelCache.size === 0) return;
+  const keys = [...trafficModelCache.keys()];
+  const { scene, spec } = trafficModelCache.get(keys[Math.floor(Math.random() * keys.length)]);
+  const model = scene.clone(true);
+  model.scale.setScalar(spec.scale);
+  model.rotation.y = spec.rotY;
+  const bbox = new THREE.Box3().setFromObject(model);
+  model.position.y = -bbox.min.y;
+  model.traverse(child => {
+    if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; }
+  });
+  while (obs.mesh.children.length > 0) obs.mesh.remove(obs.mesh.children[0]);
+  obs.mesh.add(model);
+}
+
+function loadTrafficModels() {
+  const specs = [
+    { key: 'sport',  url: 'assets/models/poly-pizza-realistic/supercar.glb',   scale: 0.01, rotY: Math.PI / 2 },
+    { key: 'suv',    url: 'assets/models/poly-pizza-realistic/range-rover.glb', scale: 1,    rotY: Math.PI / 2 },
+    { key: 'pickup', url: 'assets/models/poly-pizza-realistic/humvee.glb',      scale: 1,    rotY: Math.PI },
+  ];
+  for (const spec of specs) {
+    gltfLoader.load(spec.url, gltf => trafficModelCache.set(spec.key, { scene: gltf.scene, spec }));
+  }
 }
 
 function createObstacles() {
@@ -1267,7 +1298,7 @@ function applyCollisionDamage(amount, label) {
   const p = state.player;
   const vehicle = currentVehicle();
   const before = p.damage;
-  p.damage = clamp(p.damage + (amount * 0.18) / vehicle.durability, 0, 100);
+  p.damage = clamp(p.damage + (amount * 0.09) / vehicle.durability, 0, 100);
   state.damageHits += 1;
   state.cameraShake = Math.max(state.cameraShake, clamp(amount * 0.33, 0.8, 5.4));
   state.message = p.damage > 82 ? `${label} 重击，车辆严重损毁` : `${label} 撞击，新增破损`;
@@ -1436,15 +1467,38 @@ function addSmokeBurst(count) {
 function updateObstacles(dt) {
   for (const o of state.obstacles) {
     if (o.hp <= 0) continue;
+
+    const recovering = o.hitTimer > 0 || Math.abs(o.spin) > 1.2;
+    if (o.aiSpeed !== undefined && !recovering) {
+      // AI cruise: accelerate toward lane velocity
+      const tVx = Math.cos(o.aiAngle) * o.aiSpeed;
+      const tVz = Math.sin(o.aiAngle) * o.aiSpeed;
+      o.vx = lerp(o.vx, tVx, Math.min(1, dt * 2.8));
+      o.vz = lerp(o.vz, tVz, Math.min(1, dt * 2.8));
+      o.yaw = lerpAngle(o.yaw, o.aiAngle, Math.min(1, dt * 3.5));
+    } else {
+      o.vx *= 0.986;
+      o.vz *= 0.986;
+    }
+
     o.x += o.vx * dt;
     o.z += o.vz * dt;
-    o.vx *= 0.986;
-    o.vz *= 0.986;
     o.yaw += o.spin * dt;
     o.spin *= 0.97;
     o.hitTimer = Math.max(0, o.hitTimer - dt);
-    o.x = clamp(o.x, WORLD.minX + o.radius, WORLD.maxX - o.radius);
-    o.z = clamp(o.z, WORLD.minZ + o.radius, WORLD.maxZ - o.radius);
+
+    if (o.aiSpeed !== undefined) {
+      // Wrap-around so city stays populated
+      const cx = Math.cos(o.aiAngle), cz = Math.sin(o.aiAngle);
+      if (cx > 0.5 && o.x > WORLD.maxX - 2) o.x = WORLD.minX + 4;
+      else if (cx < -0.5 && o.x < WORLD.minX + 2) o.x = WORLD.maxX - 4;
+      if (cz > 0.5 && o.z > WORLD.maxZ - 2) o.z = WORLD.minZ + 4;
+      else if (cz < -0.5 && o.z < WORLD.minZ + 2) o.z = WORLD.maxZ - 4;
+    } else {
+      o.x = clamp(o.x, WORLD.minX + o.radius, WORLD.maxX - o.radius);
+      o.z = clamp(o.z, WORLD.minZ + o.radius, WORLD.maxZ - o.radius);
+    }
+
     o.mesh.position.x = o.x;
     o.mesh.position.z = o.z;
     o.mesh.rotation.y = o.yaw;
@@ -1853,6 +1907,7 @@ window.advanceTime = (ms) => {
   render();
 };
 
+loadTrafficModels();
 buildWorld();
 buildCar();
 buildCockpit();
