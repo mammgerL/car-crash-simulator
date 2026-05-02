@@ -206,6 +206,7 @@ const state = {
   messageTimer: 0,
   player: null,
   obstacles: [],
+  buildings: [],
   particles: [],
   skidMarks: [],
   damageMarks: [],
@@ -522,6 +523,7 @@ function addBuilding(x, z, w, h, d, color) {
   const building = makeBox(w, h, d, mat);
   building.position.set(x, h * 0.5, z);
   scene.add(building);
+  state.buildings.push({ x, z, hw: w * 0.5, hd: d * 0.5 });
 
   const rows = Math.max(2, Math.floor(h / 1.25));
   const cols = Math.max(2, Math.floor(w / 1.8));
@@ -610,32 +612,48 @@ function buildWorld() {
   }
 
   const curbMat = new THREE.MeshStandardMaterial({ color: 0x6c7478, roughness: 0.7 });
-  // Curbs at horizontal road edges
+  // Helper: draw a curb line along X ('x') or Z ('z'), leaving gaps at road crossings
+  function addCurbLine(along, fixedPos, start, end, gapCenters, gapHalf) {
+    const gaps = gapCenters
+      .map(c => [c - gapHalf, c + gapHalf])
+      .filter(([a, b]) => b > start && a < end)
+      .sort((a, b) => a[0] - b[0]);
+    let cur = start;
+    const addSeg = (from, to) => {
+      const len = to - from;
+      if (len < 0.3) return;
+      const mid = (from + to) / 2;
+      const box = along === 'x'
+        ? makeBox(len, 0.36, 0.3, curbMat.clone())
+        : makeBox(0.3, 0.36, len, curbMat.clone());
+      box.position.set(along === 'x' ? mid : fixedPos, 0.18, along === 'x' ? fixedPos : mid);
+      scene.add(box);
+    };
+    for (const [gFrom, gTo] of gaps) {
+      if (cur < gFrom) addSeg(cur, gFrom);
+      cur = Math.max(cur, gTo);
+    }
+    if (cur < end) addSeg(cur, end);
+  }
+
+  // Horizontal road edge curbs — gap at each vertical road
   for (const z of roadsH) {
     for (const side of [-1, 1]) {
-      const curb = makeBox(worldW, 0.36, 0.3, curbMat);
-      curb.position.set(worldCX, 0.18, z + side * rw);
-      scene.add(curb);
+      addCurbLine('x', z + side * rw, WORLD.minX, WORLD.maxX, roadsV, rw);
     }
   }
-  // Curbs at vertical road edges
+  // Vertical road edge curbs — gap at each horizontal road
   for (const x of roadsV) {
     for (const side of [-1, 1]) {
-      const curb = makeBox(0.3, 0.36, worldD, curbMat);
-      curb.position.set(x + side * rw, 0.18, worldCZ);
-      scene.add(curb);
+      addCurbLine('z', x + side * rw, WORLD.minZ, WORLD.maxZ, roadsH, rw);
     }
   }
-  // World boundary curbs
-  for (const z of [WORLD.minZ + 0.25, WORLD.maxZ - 0.25]) {
-    const curb = makeBox(worldW, 0.36, 0.3, curbMat);
-    curb.position.set(worldCX, 0.18, z);
-    scene.add(curb);
+  // World boundary curbs — gap at each road crossing
+  for (const z of [WORLD.minZ + 0.15, WORLD.maxZ - 0.15]) {
+    addCurbLine('x', z, WORLD.minX, WORLD.maxX, roadsV, rw);
   }
-  for (const x of [WORLD.minX + 0.25, WORLD.maxX - 0.25]) {
-    const curb = makeBox(0.3, 0.4, worldD + 2, curbMat);
-    curb.position.set(x, 0.2, worldCZ);
-    scene.add(curb);
+  for (const x of [WORLD.minX + 0.15, WORLD.maxX - 0.15]) {
+    addCurbLine('z', x, WORLD.minZ, WORLD.maxZ, roadsH, rw);
   }
 
   // Buildings in city blocks
@@ -1222,6 +1240,29 @@ function collidePlayerWithObstacles() {
   }
 }
 
+function collidePlayerWithBuildings() {
+  const p = state.player;
+  const r = p.radius;
+  for (const b of state.buildings) {
+    const cx = clamp(p.x, b.x - b.hw, b.x + b.hw);
+    const cz = clamp(p.z, b.z - b.hd, b.z + b.hd);
+    const dx = p.x - cx;
+    const dz = p.z - cz;
+    const dist = Math.hypot(dx, dz);
+    if (dist >= r || dist < 1e-6) continue;
+    const nx = dx / dist;
+    const nz = dz / dist;
+    p.x += nx * (r - dist);
+    p.z += nz * (r - dist);
+    const closing = -(p.vx * nx + p.vz * nz);
+    if (closing > 2) {
+      const impact = closing * 8.5;
+      applyCollisionDamage(clamp(impact * 0.4, 3, 30), "建筑物");
+    }
+    p.speed *= -0.35;
+  }
+}
+
 function applyCollisionDamage(amount, label) {
   const p = state.player;
   const vehicle = currentVehicle();
@@ -1548,6 +1589,7 @@ function update(dt) {
   controlPlayer(simDt);
   updateObstacles(simDt);
   collidePlayerWithObstacles();
+  collidePlayerWithBuildings();
   updateParticles(dt);
   updateLooseParts(dt);
   if (state.player.damage > 58) {
