@@ -11,10 +11,16 @@ const resultCopy = document.getElementById("result-copy");
 const vehicleButtons = [...document.querySelectorAll(".vehicle-option")];
 
 const WORLD = {
-  minX: -120,
-  maxX: 200,
-  minZ: -65,
-  maxZ: 65,
+  minX: -130,
+  maxX: 220,
+  minZ: -100,
+  maxZ: 100,
+};
+
+const CITY = {
+  roadsH: [-60, -20, 20, 60],
+  roadsV: [-90, -45, 0, 45, 90, 135, 180],
+  rw: 7,
 };
 
 const keys = new Set();
@@ -43,7 +49,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fc1d5);
-scene.fog = new THREE.Fog(0x9fc1d5, 60, 200);
+scene.fog = new THREE.Fog(0x9fc1d5, 60, 220);
 
 const camera = new THREE.PerspectiveCamera(62, canvas.width / canvas.height, 0.08, 150);
 scene.add(camera);
@@ -55,10 +61,10 @@ const sun = new THREE.DirectionalLight(0xffffff, 2.1);
 sun.position.set(-18, 28, 14);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -100;
-sun.shadow.camera.right = 100;
-sun.shadow.camera.top = 80;
-sun.shadow.camera.bottom = -80;
+sun.shadow.camera.left = -110;
+sun.shadow.camera.right = 110;
+sun.shadow.camera.top = 90;
+sun.shadow.camera.bottom = -90;
 scene.add(sun);
 
 const mats = {
@@ -531,84 +537,148 @@ function addBuilding(x, z, w, h, d, color) {
   }
 }
 
-function addCrosswalk(x) {
-  for (let z = -13; z <= 13; z += 1.25) {
+function addCrosswalk(cx, rz) {
+  const { rw } = CITY;
+  for (let z = rz - rw + 0.5; z <= rz + rw - 0.5; z += 1.25) {
     const stripe = makeBox(3.2, 0.022, 0.42, mats.white.clone());
-    stripe.position.set(x, 0.035, z);
+    stripe.position.set(cx, 0.038, z);
     scene.add(stripe);
   }
 }
 
 function buildWorld() {
-  const worldCenterX = (WORLD.minX + WORLD.maxX) / 2;
+  const { roadsH, roadsV, rw } = CITY;
+  const worldCX = (WORLD.minX + WORLD.maxX) / 2;
+  const worldCZ = (WORLD.minZ + WORLD.maxZ) / 2;
   const worldW = WORLD.maxX - WORLD.minX;
   const worldD = WORLD.maxZ - WORLD.minZ;
 
-  const cityBase = new THREE.Mesh(new THREE.PlaneGeometry(worldW + 60, worldD + 60), mats.concrete);
-  cityBase.rotation.x = -Math.PI / 2;
-  cityBase.position.set(worldCenterX, -0.055, 0);
-  cityBase.receiveShadow = true;
-  scene.add(cityBase);
+  // Concrete ground base
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(worldW + 60, worldD + 60), mats.concrete);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.set(worldCX, -0.055, worldCZ);
+  ground.receiveShadow = true;
+  scene.add(ground);
 
-  const mainRoad = new THREE.Mesh(new THREE.PlaneGeometry(worldW, 30), mats.asphalt);
-  mainRoad.rotation.x = -Math.PI / 2;
-  mainRoad.position.set(worldCenterX, 0, 0);
-  mainRoad.receiveShadow = true;
-  scene.add(mainRoad);
-
-  for (const x of [-90, -60, -30, 0, 30, 60, 90, 120, 150, 180]) {
-    const crossRoad = new THREE.Mesh(new THREE.PlaneGeometry(11, worldD + 10), mats.asphalt);
-    crossRoad.rotation.x = -Math.PI / 2;
-    crossRoad.position.set(x, 0.002, 0);
-    crossRoad.receiveShadow = true;
-    scene.add(crossRoad);
-    addCrosswalk(x - 6);
-    addCrosswalk(x + 6);
+  // Horizontal roads (along X axis)
+  for (const z of roadsH) {
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(worldW, rw * 2), mats.asphalt);
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(worldCX, 0, z);
+    road.receiveShadow = true;
+    scene.add(road);
+    // Center dashes
+    for (let x = WORLD.minX + 4; x < WORLD.maxX; x += 8) {
+      const dash = makeBox(3.2, 0.024, 0.14, mats.line);
+      dash.position.set(x, 0.03, z);
+      scene.add(dash);
+      const la = makeBox(2.8, 0.022, 0.1, mats.white.clone());
+      la.position.set(x + 1.2, 0.031, z - rw * 0.55);
+      const lb = la.clone();
+      lb.position.z = z + rw * 0.55;
+      scene.add(la, lb);
+    }
   }
 
-  for (const z of [-17.2, 17.2]) {
-    const sidewalk = makeBox(worldW, 0.14, 4.0, mats.sidewalk.clone());
-    sidewalk.position.set(worldCenterX, 0.07, z);
-    scene.add(sidewalk);
+  // Vertical roads (along Z axis)
+  for (const x of roadsV) {
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(rw * 2, worldD), mats.asphalt);
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(x, 0.001, worldCZ);
+    road.receiveShadow = true;
+    scene.add(road);
+    // Center dashes along Z
+    for (let z = WORLD.minZ + 4; z < WORLD.maxZ; z += 8) {
+      const dash = makeBox(0.14, 0.024, 3.2, mats.line);
+      dash.position.set(x, 0.031, z);
+      scene.add(dash);
+    }
+    // Crosswalks at each intersection
+    for (const zh of roadsH) {
+      addCrosswalk(x - rw * 1.15, zh);
+      addCrosswalk(x + rw * 1.15, zh);
+    }
   }
 
-  for (let x = WORLD.minX + 4; x < WORLD.maxX; x += 8) {
-    const dash = makeBox(3.2, 0.024, 0.14, mats.line);
-    dash.position.set(x, 0.03, -0.08);
-    dash.receiveShadow = false;
-    scene.add(dash);
-    const sideLineA = makeBox(2.8, 0.022, 0.1, mats.white.clone());
-    sideLineA.position.set(x + 1.2, 0.031, -7.5);
-    const sideLineB = sideLineA.clone();
-    sideLineB.position.z = 7.5;
-    scene.add(sideLineA, sideLineB);
+  // Sidewalks alongside horizontal roads
+  for (const z of roadsH) {
+    for (const side of [-1, 1]) {
+      const sw = makeBox(worldW, 0.14, 3.5, mats.sidewalk.clone());
+      sw.position.set(worldCX, 0.07, z + side * (rw + 1.75));
+      scene.add(sw);
+    }
   }
 
   const curbMat = new THREE.MeshStandardMaterial({ color: 0x6c7478, roughness: 0.7 });
-  for (const z of [WORLD.minZ + 0.25, WORLD.maxZ - 0.25, -15.2, 15.2]) {
-    const curb = makeBox(worldW, 0.36, 0.32, curbMat);
-    curb.position.set(worldCenterX, 0.18, z);
+  // Curbs at horizontal road edges
+  for (const z of roadsH) {
+    for (const side of [-1, 1]) {
+      const curb = makeBox(worldW, 0.36, 0.3, curbMat);
+      curb.position.set(worldCX, 0.18, z + side * rw);
+      scene.add(curb);
+    }
+  }
+  // Curbs at vertical road edges
+  for (const x of roadsV) {
+    for (const side of [-1, 1]) {
+      const curb = makeBox(0.3, 0.36, worldD, curbMat);
+      curb.position.set(x + side * rw, 0.18, worldCZ);
+      scene.add(curb);
+    }
+  }
+  // World boundary curbs
+  for (const z of [WORLD.minZ + 0.25, WORLD.maxZ - 0.25]) {
+    const curb = makeBox(worldW, 0.36, 0.3, curbMat);
+    curb.position.set(worldCX, 0.18, z);
     scene.add(curb);
   }
   for (const x of [WORLD.minX + 0.25, WORLD.maxX - 0.25]) {
-    const curb = makeBox(0.36, 0.4, worldD + 2, curbMat);
-    curb.position.set(x, 0.2, 0);
+    const curb = makeBox(0.3, 0.4, worldD + 2, curbMat);
+    curb.position.set(x, 0.2, worldCZ);
     scene.add(curb);
   }
 
-  const buildingColors = [0x59656b, 0x766f68, 0x4d5a61, 0x847d70, 0x66717a];
-  for (let i = 0; i < 50; i += 1) {
-    const x = WORLD.minX + 10 + i * 6.5;
-    const upper = i % 2 === 0;
-    const z = upper ? rand(-58, -22) : rand(22, 58);
-    addBuilding(x, z, rand(3.4, 5.8), rand(4.8, 13.5), rand(3.2, 6.2), buildingColors[i % buildingColors.length]);
+  // Buildings in city blocks
+  const buildingColors = [0x59656b, 0x766f68, 0x4d5a61, 0x847d70, 0x66717a, 0x5a4f6b, 0x4a6050, 0x6b5a42];
+  function blockRanges(roads, halfW, wMin, wMax) {
+    const r = [[wMin, roads[0] - halfW]];
+    for (let i = 0; i < roads.length - 1; i++) r.push([roads[i] + halfW, roads[i + 1] - halfW]);
+    r.push([roads[roads.length - 1] + halfW, wMax]);
+    return r.filter(([a, b]) => b - a >= 6);
+  }
+  const xSegs = blockRanges(roadsV, rw + 3.5, WORLD.minX + 4, WORLD.maxX - 4);
+  const zSegs = blockRanges(roadsH, rw + 3.5, WORLD.minZ + 4, WORLD.maxZ - 4);
+  let ci = 0;
+  for (const [x0, x1] of xSegs) {
+    for (const [z0, z1] of zSegs) {
+      const bw = x1 - x0;
+      const bd = z1 - z0;
+      if (bw < 5 || bd < 5) continue;
+      const nx = Math.max(1, Math.floor(bw / 18));
+      const nz = Math.max(1, Math.floor(bd / 18));
+      for (let ix = 0; ix < nx; ix++) {
+        for (let iz = 0; iz < nz; iz++) {
+          const cx = x0 + bw * (ix + 0.5) / nx + rand(-2, 2);
+          const cz = z0 + bd * (iz + 0.5) / nz + rand(-2, 2);
+          addBuilding(cx, cz, rand(4, Math.min(bw / nx - 1, 9)), rand(5, 15), rand(4, Math.min(bd / nz - 1, 9)), buildingColors[ci++ % buildingColors.length]);
+        }
+      }
+    }
   }
 
-  for (let i = 0; i < 60; i += 1) {
-    const scuff = makeBox(rand(1.8, 5.2), 0.018, 0.05, mats.black);
-    scuff.position.set(rand(WORLD.minX + 5, WORLD.maxX - 5), 0.034, rand(-12, 12));
-    scuff.rotation.y = rand(-0.55, 0.55);
-    scuff.material = mats.black.clone();
+  // Road scuff marks
+  for (let i = 0; i < 80; i++) {
+    const onH = Math.random() < 0.6;
+    const scuff = makeBox(rand(1.8, 5.2), 0.018, 0.05, mats.black.clone());
+    if (onH) {
+      const z = roadsH[Math.floor(Math.random() * roadsH.length)];
+      scuff.position.set(rand(WORLD.minX + 5, WORLD.maxX - 5), 0.034, z + rand(-5, 5));
+      scuff.rotation.y = rand(-0.55, 0.55);
+    } else {
+      const x = roadsV[Math.floor(Math.random() * roadsV.length)];
+      scuff.position.set(x + rand(-5, 5), 0.034, rand(WORLD.minZ + 5, WORLD.maxZ - 5));
+      scuff.rotation.y = Math.PI / 2 + rand(-0.3, 0.3);
+    }
     scuff.material.transparent = true;
     scuff.material.opacity = 0.1;
     scene.add(scuff);
@@ -844,8 +914,8 @@ function buildCockpit() {
 function makePlayer() {
   const vehicle = currentVehicle();
   return {
-    x: -80,
-    z: 0,
+    x: -115,
+    z: 20,
     vx: 0,
     vz: 0,
     angle: 0,
@@ -931,57 +1001,43 @@ function makeTrafficCar(x, z, yaw, color, type = "其它汽车") {
 
 function createObstacles() {
   clearObstacles();
-  return [
-    // West zone x=-110 to -50
-    makeTrafficCar(-110, -7.4, 0.04, 0x2d6a8e),
-    makeTrafficCar(-103, 7.1, Math.PI + 0.06, 0x9d2f3f),
-    makeTrafficCar(-95, -6.2, 0.08, 0xf4efe6),
-    makeTrafficCar(-88, 7.4, Math.PI - 0.05, 0x2f6b4f),
-    makeTrafficCar(-80, -3.8, Math.PI / 2, 0xd6a33a, "横停车辆"),
-    makeTrafficCar(-72, 6.8, Math.PI + 0.04, 0x5d6a74),
-    makeTrafficCar(-64, -7.5, -0.06, 0x8f3e2f),
-    makeTrafficCar(-56, 3.6, -Math.PI / 2, 0x31a9b8, "横停车辆"),
-    // Mid-west zone x=-45 to 0
-    makeTrafficCar(-48, -7.2, 0.03, 0xf2c14e),
-    makeTrafficCar(-40, 6.5, Math.PI - 0.04, 0x465c7a),
-    makeTrafficCar(-32, -4.1, Math.PI / 2, 0x923a63, "横停车辆"),
-    makeTrafficCar(-24, 7.3, Math.PI + 0.02, 0xb7b0a3),
-    makeTrafficCar(-16, -7.1, -0.03, 0x3e7a56),
-    makeTrafficCar(-8, 5.8, Math.PI - 0.07, 0x22272a),
-    // Central zone x=5 to 60
-    makeTrafficCar(5, -5.5, 0.05, 0x4a7fc1),
-    makeTrafficCar(12, 7.0, Math.PI + 0.06, 0xe84855),
-    makeTrafficCar(20, -7.4, -0.04, 0x7a5c3e),
-    makeTrafficCar(28, 3.8, -Math.PI / 2, 0x3a8f5e, "横停车辆"),
-    makeTrafficCar(36, 6.7, Math.PI + 0.03, 0x9e6b4a),
-    makeTrafficCar(44, -6.8, 0.07, 0x4d6892),
-    makeTrafficCar(52, 7.5, Math.PI - 0.05, 0xb34d2f),
-    // East zone x=65 to 130
-    makeTrafficCar(65, -5.2, 0.04, 0x2f7f6a),
-    makeTrafficCar(74, 7.0, Math.PI + 0.05, 0x7a9e3e),
-    makeTrafficCar(83, -7.6, -0.03, 0x5e3a92),
-    makeTrafficCar(92, 4.2, Math.PI / 2, 0xc8a83a, "横停车辆"),
-    makeTrafficCar(100, 6.4, Math.PI - 0.06, 0x3e7a9e),
-    makeTrafficCar(108, -7.0, 0.04, 0x8f4a3a),
-    makeTrafficCar(116, 7.2, Math.PI + 0.02, 0x4a6e8f),
-    makeTrafficCar(124, -6.3, -0.05, 0x6f4a7e),
-    // Far east zone x=135 to 190
-    makeTrafficCar(135, 5.5, Math.PI - 0.03, 0x2d8ea3),
-    makeTrafficCar(144, -7.3, 0.06, 0x9a4f68),
-    makeTrafficCar(153, 6.8, Math.PI + 0.04, 0x4a8c5e),
-    makeTrafficCar(162, -4.6, -Math.PI / 2, 0xd4823a, "横停车辆"),
-    makeTrafficCar(170, 7.4, Math.PI - 0.02, 0x5e6a9e),
-    makeTrafficCar(178, -6.9, 0.05, 0x8e4a2f),
-    makeTrafficCar(187, 5.3, Math.PI + 0.07, 0x3e8f7a),
-    // Scattered obstacles
-    makeObstacle(-95, 0.5, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"),
-    makeObstacle(-60, -10.5, 1.08, "油桶", 24, 1.1, mats.red.clone(), "barrel"),
-    makeObstacle(-10, 10.8, 1.22, "轮胎堆", 30, 1.4, mats.tire, "tire"),
-    makeObstacle(40, 0.3, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"),
-    makeObstacle(85, -11.2, 1.45, "路障", 40, 1.8, mats.yellow.clone(), "block"),
-    makeObstacle(130, 10.4, 1.22, "轮胎堆", 30, 1.4, mats.tire, "tire"),
-    makeObstacle(165, -10.8, 1.08, "油桶", 24, 1.1, mats.red.clone(), "barrel"),
-  ];
+  const { roadsH, roadsV, rw } = CITY;
+  const obs = [];
+  const colors = [0x2d6a8e,0x9d2f3f,0xf4efe6,0x2f6b4f,0xd6a33a,0x5d6a74,0x8f3e2f,0x31a9b8,0xf2c14e,0x465c7a,0x923a63,0xb7b0a3,0x3e7a56,0x22272a,0x4a7fc1,0xe84855,0x7a5c3e,0x4d6892,0xb34d2f,0x2f7f6a,0x7a9e3e,0x5e3a92,0xc8a83a,0x8e4a2f];
+  let ci = 0;
+  const lane = rw * 0.5;
+
+  // Traffic on horizontal roads
+  const hXPos = [-108,-88,-68,-50,-30,-10,10,32,52,72,95,115,142,162,192,210];
+  for (const zh of roadsH) {
+    for (let i = 0; i < hXPos.length; i++) {
+      const x = hXPos[i] + rand(-3, 3);
+      const lz = zh + (i % 2 === 0 ? -lane : lane);
+      const yaw = i % 2 === 0 ? rand(-0.07, 0.07) : Math.PI + rand(-0.07, 0.07);
+      obs.push(makeTrafficCar(x, lz, yaw, colors[ci++ % colors.length]));
+    }
+  }
+
+  // Traffic on vertical roads
+  const vZPos = [-88,-70,-48,-30,-8,12,32,52,75,88];
+  for (const xv of roadsV) {
+    for (let i = 0; i < vZPos.length; i++) {
+      const z = vZPos[i] + rand(-3, 3);
+      const lx = xv + (i % 2 === 0 ? -lane : lane);
+      const yaw = i % 2 === 0 ? -Math.PI / 2 + rand(-0.07, 0.07) : Math.PI / 2 + rand(-0.07, 0.07);
+      obs.push(makeTrafficCar(lx, z, yaw, colors[ci++ % colors.length]));
+    }
+  }
+
+  // Static obstacles
+  obs.push(makeObstacle(-72,  20, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"));
+  obs.push(makeObstacle( 47, -20, 1.08, "油桶",   24, 1.1, mats.red.clone(),    "barrel"));
+  obs.push(makeObstacle( 93,  60, 1.22, "轮胎堆", 30, 1.4, mats.tire,           "tire"));
+  obs.push(makeObstacle(138,  20, 1.45, "路障",   40, 1.8, mats.yellow.clone(), "block"));
+  obs.push(makeObstacle(-45, -60, 1.25, "施工桶", 32, 1.2, mats.yellow.clone(), "barrel"));
+  obs.push(makeObstacle(  2,  45, 1.08, "油桶",   24, 1.1, mats.red.clone(),    "barrel"));
+
+  return obs;
 }
 
 function clearObstacles() {
