@@ -183,9 +183,9 @@ const VEHICLES = {
     handling: 1.7,
     radius: 1.46,
     style: "police",
-    model: "assets/models/poly-pizza-realistic/dodge-charger.glb",
+    model: "assets/models/poly-pizza-realistic/police-quaternius.glb",
     modelScale: 1,
-    modelYOffset: 0.37,
+    modelYOffset: 0,
     modelRotationY: Math.PI / 2,
   },
 };

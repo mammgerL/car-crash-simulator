@@ -24,3 +24,10 @@ License: https://creativecommons.org/licenses/by/3.0/
    Creator: David Sirera
    Source: https://poly.pizza/m/4b80hRVxqvv
    Download: https://static.poly.pizza/87d07a91-9367-402b-ac76-205fa4e3271b.glb
+
+5) police-quaternius.glb
+   Title: Police Car
+   Creator: Quaternius
+   Source: https://poly.pizza/m/BwwnUrWGmV
+   Download: https://static.poly.pizza/179e43ce-b9e0-40cf-8b99-641693d3207e.glb
+   License: CC0 1.0 (Public Domain)
