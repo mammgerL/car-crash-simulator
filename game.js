@@ -1472,7 +1472,7 @@ function updateObstacles(dt) {
     if (o.aiSpeed !== undefined && !recovering) {
       // AI cruise: accelerate toward lane velocity
       const tVx = Math.cos(o.aiAngle) * o.aiSpeed;
-      const tVz = Math.sin(o.aiAngle) * o.aiSpeed;
+      const tVz = -Math.sin(o.aiAngle) * o.aiSpeed;
       o.vx = lerp(o.vx, tVx, Math.min(1, dt * 2.8));
       o.vz = lerp(o.vz, tVz, Math.min(1, dt * 2.8));
       o.yaw = lerpAngle(o.yaw, o.aiAngle, Math.min(1, dt * 3.5));
@@ -1489,7 +1489,7 @@ function updateObstacles(dt) {
 
     if (o.aiSpeed !== undefined) {
       // Wrap-around so city stays populated
-      const cx = Math.cos(o.aiAngle), cz = Math.sin(o.aiAngle);
+      const cx = Math.cos(o.aiAngle), cz = -Math.sin(o.aiAngle);
       if (cx > 0.5 && o.x > WORLD.maxX - 2) o.x = WORLD.minX + 4;
       else if (cx < -0.5 && o.x < WORLD.minX + 2) o.x = WORLD.maxX - 4;
       if (cz > 0.5 && o.z > WORLD.maxZ - 2) o.z = WORLD.minZ + 4;
